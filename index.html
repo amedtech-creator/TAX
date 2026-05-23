@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>세무자료 도우미 로그인</title>
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#16a34a">
+  <style>
+    :root{--green:#16a34a;--green-dark:#15803d;--red:#ef4444;--gray:#6b7280;--border:#e5e7eb;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;background:linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;}
+    .card{background:#fff;border-radius:20px;box-shadow:0 8px 40px rgba(22,163,74,.12);width:100%;max-width:380px;padding:40px 36px;}
+    .logo{display:flex;align-items:center;gap:12px;margin-bottom:32px;}
+    .logo-icon{width:48px;height:48px;background:var(--green);border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.4rem;}
+    .logo-text{font-size:1.15rem;font-weight:800;color:#111;}
+    .logo-sub{font-size:.75rem;color:var(--gray);}
+    label{display:block;font-size:.8rem;font-weight:600;color:#374151;margin-bottom:6px;}
+    .field{margin-bottom:16px;}
+    input[type=email],input[type=password],input[type=text]{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;outline:none;transition:border .2s;}
+    input:focus{border-color:var(--green);}
+    .btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:1rem;font-weight:700;cursor:pointer;transition:opacity .2s;}
+    .btn-primary{background:var(--green);color:#fff;}
+    .btn-primary:hover{opacity:.9;}
+    .btn-secondary{background:#f3f4f6;color:#374151;margin-top:8px;}
+    .msg{font-size:.82rem;text-align:center;margin-top:12px;min-height:20px;}
+    .msg.error{color:var(--red);}
+    .msg.success{color:var(--green);}
+    .remember-row{display:flex;align-items:center;gap:6px;margin-bottom:16px;}
+    .remember-row input{width:auto;}
+    .remember-row label{margin:0;font-weight:400;color:var(--gray);}
+    .btn.loading{opacity:.6;cursor:not-allowed;position:relative}
+    .btn.loading::after{content:'';position:absolute;top:50%;left:50%;width:16px;height:16px;margin-top:-8px;margin-left:-8px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .btn.loading .btn-text{opacity:0}
+    .footer-note{font-size:.7rem;color:var(--gray);text-align:center;margin-top:24px;line-height:1.5;}
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">🧾</div>
+    <div>
+      <div class="logo-text">세무자료 도우미</div>
+      <div class="logo-sub">AMT · KY · BEST</div>
+    </div>
+  </div>
+
+  <div id="loginBox">
+    <div class="field">
+      <label>이메일 주소</label>
+      <input type="email" id="email" placeholder="example@gmail.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>코드번호</label>
+      <input type="password" id="pw" placeholder="코드번호 입력" autocomplete="off"
+        onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="remember-row">
+      <input type="checkbox" id="rememberMe" checked>
+      <label for="rememberMe">이 기기에서 자동 로그인</label>
+    </div>
+    <button class="btn btn-primary" id="loginBtn" onclick="doLogin()"><span class="btn-text">로그인</span></button>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+
+  <div class="footer-note">
+    📌 기존 AMT 관리시스템과 동일한 코드 사용
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+// ★ amt-tax 신규 프로젝트 (세무 앱 전용)
+const FB_CFG = {
+  apiKey: "AIzaSyD6kmefRjjORwWBIyDl1n105bGG7rJf8iQ",
+  authDomain: "amt-tax.firebaseapp.com",
+  databaseURL: "https://amt-tax-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "amt-tax",
+  storageBucket: "amt-tax.firebasestorage.app",
+  messagingSenderId: "759927124180",
+  appId: "1:759927124180:web:20b471702af9ee32354b41"
+};
+
+const SESSION_KEY = 'tax_auth_session';
+const SAVED_EMAIL = 'tax_saved_email';
+const SAVED_CODE  = 'tax_saved_code';
+const AUTOLOGIN_KEY = 'tax_autologin_ok';
+
+const app  = getApps().find(a=>a.name==='amt-tax-app') || initializeApp(FB_CFG, 'amt-tax-app');
+const auth = getAuth(app);
+const db   = getDatabase(app);
+
+// 더미 패스워드 생성 (기존 AMT와 동일한 패턴, 단 prefix만 다름)
+function dummyPw(email){
+  return 'amttax2026_' + (email||'').toLowerCase().replace(/[^a-z0-9]/g,'_') + '_x';
+}
+
+// 이메일을 Firebase 키로 안전하게 변환 (e.g. kyunghoyou@gmail.com → kyunghoyou)
+function emailToKey(email){
+  return (email||'').toLowerCase().trim().split('@')[0];
+}
+
+async function verifyCodeInDb(email, code){
+  email = (email||'').toLowerCase().trim();
+  code = (code||'').trim();
+  if(!email || !code) return { ok:false, reason:'empty' };
+
+  try{
+    // tax_admins에서 이메일 prefix로 조회
+    const key = emailToKey(email);
+    console.log('[Login] DB 조회 키:', key, '/ 경로: tax_admins/'+key);
+    const snap = await get(ref(db,'tax_admins/'+key));
+    console.log('[Login] snap.exists():', snap.exists());
+
+    if(snap.exists()){
+      const adm = snap.val();
+      // 이메일 정확히 일치 확인 (보안)
+      if((adm.email||'').toLowerCase() !== email){
+        console.warn('[Login] 이메일 불일치:', adm.email, 'vs', email);
+        return { ok:false, reason:'not_admin_email' };
+      }
+      console.log('[Login] DB코드 일치 여부:', String(adm.code||'') === code);
+      if(String(adm.code||'') === code){
+        return { ok:true, role:adm.role||'admin', name:adm.name||'', email };
+      }
+      return { ok:false, reason:'code_mismatch' };
+    }
+    return { ok:false, reason:'not_admin_email' };
+  }catch(e){
+    console.error('[Login] DB 조회 에러:', e);
+    return { ok:false, reason:'db_error', message:e.message };
+  }
+}
+
+async function authSignInWithDummy(email){
+  email = (email||'').toLowerCase().trim();
+  const pw = dummyPw(email);
+  try{
+    await signInWithEmailAndPassword(auth, email, pw);
+    return { ok:true };
+  }catch(e){
+    const code = e.code || '';
+    if(code.includes('user-not-found') || code.includes('invalid-credential') || code.includes('wrong-password')){
+      try{
+        await createUserWithEmailAndPassword(auth, email, pw);
+        return { ok:true, created:true };
+      }catch(ce){
+        const cc = ce.code || '';
+        if(cc.includes('email-already-in-use')){
+          return { ok:false, reason:'auth_legacy' };
+        }
+        return { ok:false, reason:'auth_create_error', message:ce.message };
+      }
+    }
+    return { ok:false, reason:'auth_signin_error', message:e.message };
+  }
+}
+
+async function verifyAndSignIn(email, code){
+  const authRes = await authSignInWithDummy(email);
+  if(!authRes.ok) return authRes;
+  const res = await verifyCodeInDb(email, code);
+  if(!res.ok){
+    try{ await signOut(auth); }catch(e){}
+  }
+  return res;
+}
+
+function showMsg(id, text, cls){
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'msg ' + (cls || '');
+}
+
+// 자동 로그인 시도
+(async function restoreAndAutoLogin(){
+  const em = localStorage.getItem(SAVED_EMAIL)||'';
+  if(em) document.getElementById('email').value = em;
+
+  const savedCode = localStorage.getItem(SAVED_CODE)||'';
+  const autoOk = localStorage.getItem(AUTOLOGIN_KEY) === '1';
+  if(!em || !savedCode || !autoOk) return;
+
+  showMsg('loginMsg','🔐 자동 로그인 확인 중...','');
+  const res = await verifyAndSignIn(em, savedCode);
+  if(!res.ok){
+    localStorage.removeItem(SAVED_CODE);
+    localStorage.removeItem(AUTOLOGIN_KEY);
+    let msg = '⚠️ 코드번호가 변경됐습니다. 새 코드를 입력하세요';
+    if(res.reason==='auth_legacy') msg = '⚠️ Firebase Auth 재설정 필요';
+    showMsg('loginMsg', msg, 'error');
+    document.getElementById('pw').value = '';
+    document.getElementById('pw').focus();
+    return;
+  }
+  const sess = { email:em, role:res.role, name:res.name||'' };
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(sess));
+  showMsg('loginMsg','✅ 자동 로그인 완료! 이동 중...','success');
+  setTimeout(()=>location.replace('main.html'), 300);
+})();
+
+// 수동 로그인
+window.doLogin = async () => {
+  const email = document.getElementById('email').value.trim();
+  const pw    = document.getElementById('pw').value.trim();
+  if(!email||!pw){ showMsg('loginMsg','이메일과 코드번호를 입력하세요','error'); return; }
+
+  const btn = document.getElementById('loginBtn');
+  btn.classList.add('loading');
+  btn.disabled = true;
+  showMsg('loginMsg','🔐 인증 중...','');
+
+  try {
+    const res = await verifyAndSignIn(email, pw);
+    if(!res.ok){
+      let msg = '❌ 코드번호가 틀립니다';
+      if(res.reason==='not_admin_email') msg = '❌ 등록된 관리자 이메일이 아닙니다';
+      if(res.reason==='db_error') msg = '❌ 서버 오류: '+(res.message||'');
+      if(res.reason==='auth_legacy') msg = '⚠️ Firebase Auth 재설정 필요';
+      if(res.reason==='auth_signin_error') msg = '❌ '+(res.message||'인증 실패');
+      if(res.reason==='auth_create_error') msg = '❌ 계정 생성 실패: '+(res.message||'');
+      showMsg('loginMsg', msg, 'error');
+      return;
+    }
+
+    // 자동 로그인 저장
+    const remember = document.getElementById('rememberMe').checked;
+    localStorage.setItem(SAVED_EMAIL, email.toLowerCase());
+    if(remember){
+      localStorage.setItem(SAVED_CODE, pw);
+      localStorage.setItem(AUTOLOGIN_KEY, '1');
+    }else{
+      localStorage.removeItem(SAVED_CODE);
+      localStorage.removeItem(AUTOLOGIN_KEY);
+    }
+
+    const sess = { email:email.toLowerCase(), role:res.role, name:res.name||'' };
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(sess));
+    showMsg('loginMsg','✅ 로그인 성공! 이동 중...','success');
+    setTimeout(()=>location.replace('main.html'), 300);
+  } finally {
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+};
+
+// Service Worker 등록 (PWA)
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js?v=20260524-v1')
+      .then(reg => console.log('[SW] 등록 완료:', reg.scope))
+      .catch(err => console.log('[SW] 등록 실패:', err));
+  });
+}
+</script>
+</body>
+</html>

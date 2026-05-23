@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>세무자료 도우미</title>
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#16a34a">
+  <style>
+    :root{--green:#16a34a;--green-dark:#15803d;--red:#ef4444;--gray:#6b7280;--border:#e5e7eb;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;background:#f9fafb;min-height:100vh;}
+    .header{background:#fff;border-bottom:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;}
+    .header-left{display:flex;align-items:center;gap:12px;}
+    .logo-icon{width:36px;height:36px;background:var(--green);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;}
+    .header-title{font-size:1rem;font-weight:800;color:#111;}
+    .header-sub{font-size:.7rem;color:var(--gray);}
+    .user-badge{display:flex;align-items:center;gap:8px;font-size:.85rem;}
+    .role-tag{padding:3px 8px;border-radius:6px;font-size:.7rem;font-weight:700;}
+    .role-super{background:#dcfce7;color:var(--green-dark);}
+    .role-admin{background:#dbeafe;color:#1e40af;}
+    .logout-btn{padding:6px 12px;background:#f3f4f6;border:none;border-radius:6px;font-size:.8rem;font-weight:600;cursor:pointer;}
+    .logout-btn:hover{background:#e5e7eb;}
+    .container{max-width:800px;margin:0 auto;padding:24px 20px;}
+    .welcome-card{background:#fff;border-radius:16px;padding:32px 28px;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+    .welcome-title{font-size:1.4rem;font-weight:800;color:#111;margin-bottom:8px;}
+    .welcome-sub{font-size:.95rem;color:var(--gray);line-height:1.6;margin-bottom:24px;}
+    .info-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px;font-size:.85rem;color:var(--green-dark);line-height:1.7;}
+    .info-box strong{display:block;margin-bottom:6px;font-size:.95rem;}
+    .coming-soon{margin-top:24px;padding:20px;background:#fef3c7;border:1px solid #fde68a;border-radius:10px;text-align:center;}
+    .coming-soon-icon{font-size:2rem;margin-bottom:8px;}
+    .coming-soon-title{font-weight:700;color:#92400e;margin-bottom:4px;}
+    .coming-soon-text{font-size:.85rem;color:#78350f;line-height:1.6;}
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo-icon">🧾</div>
+    <div>
+      <div class="header-title">세무자료 도우미</div>
+      <div class="header-sub">AMT · KY · BEST</div>
+    </div>
+  </div>
+  <div class="user-badge">
+    <span id="userName">로딩중...</span>
+    <span class="role-tag" id="userRole">-</span>
+    <button class="logout-btn" onclick="doLogout()">로그아웃</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="welcome-card">
+    <div class="welcome-title">👋 환영합니다, <span id="welcomeName">관리자</span>님!</div>
+    <div class="welcome-sub">
+      세무사 전달용 자료를 효율적으로 정리하고 관리하는 시스템입니다.<br>
+      기존 AMT 시스템과 완전히 분리되어 안전하게 운영됩니다.
+    </div>
+
+    <div class="info-box">
+      <strong>✅ 1단계 완료 — 로그인 시스템</strong>
+      Firebase Auth + 코드 검증이 정상 작동합니다.<br>
+      이메일 + 코드로 안전하게 로그인했습니다.
+    </div>
+
+    <div class="coming-soon">
+      <div class="coming-soon-icon">🚧</div>
+      <div class="coming-soon-title">개발 중인 기능들</div>
+      <div class="coming-soon-text">
+        • 거래내역 입력 폼<br>
+        • Google Drive 연동 (영수증/세금계산서 업로드)<br>
+        • 월별 폴더 자동 생성 (AMT/KY/BEST)<br>
+        • 세무사 전달 ZIP 패키지 생성<br>
+        • 폴더 관리 (수정/추가/삭제 + OTP)
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const FB_CFG = {
+  apiKey: "AIzaSyD6kmefRjjORwWBIyDl1n105bGG7rJf8iQ",
+  authDomain: "amt-tax.firebaseapp.com",
+  databaseURL: "https://amt-tax-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "amt-tax",
+  storageBucket: "amt-tax.firebasestorage.app",
+  messagingSenderId: "759927124180",
+  appId: "1:759927124180:web:20b471702af9ee32354b41"
+};
+
+const SESSION_KEY = 'tax_auth_session';
+const SAVED_CODE  = 'tax_saved_code';
+const AUTOLOGIN_KEY = 'tax_autologin_ok';
+
+const app = getApps().find(a=>a.name==='amt-tax-app') || initializeApp(FB_CFG, 'amt-tax-app');
+const auth = getAuth(app);
+
+// 세션 확인
+function getSession(){
+  try{
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if(!raw) return null;
+    return JSON.parse(raw);
+  }catch(e){ return null; }
+}
+
+const sess = getSession();
+if(!sess){
+  alert('로그인이 필요합니다');
+  location.replace('index.html');
+} else {
+  // 사용자 정보 표시
+  document.getElementById('userName').textContent = sess.name || sess.email;
+  document.getElementById('welcomeName').textContent = sess.name || '관리자';
+  const roleEl = document.getElementById('userRole');
+  if(sess.role === 'super'){
+    roleEl.textContent = '총괄';
+    roleEl.className = 'role-tag role-super';
+  } else {
+    roleEl.textContent = '일반';
+    roleEl.className = 'role-tag role-admin';
+  }
+}
+
+// 로그아웃
+window.doLogout = async () => {
+  if(!confirm('로그아웃 하시겠습니까?')) return;
+  try{
+    await signOut(auth);
+  }catch(e){ console.warn(e); }
+  sessionStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(SAVED_CODE);
+  localStorage.removeItem(AUTOLOGIN_KEY);
+  location.replace('index.html');
+};
+
+// Service Worker 등록
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js?v=20260524-v1')
+    .then(reg => console.log('[SW] 등록 완료'))
+    .catch(err => console.log('[SW] 등록 실패:', err));
+}
+</script>
+
+</body>
+</html>
