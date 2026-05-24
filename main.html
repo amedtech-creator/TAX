@@ -135,18 +135,18 @@
       <span class="menu-badge badge-coming">준비중</span>
     </div>
 
-    <div class="menu-card disabled" data-menu="add-transaction">
+    <div class="menu-card" data-menu="add-transaction">
       <div class="menu-icon icon-blue">➕</div>
       <div class="menu-title">거래 입력</div>
       <div class="menu-desc">새 거래내역 추가, 증빙 첨부</div>
-      <span class="menu-badge badge-coming">3차 작업</span>
+      <span class="menu-badge badge-new">3차 작업</span>
     </div>
 
-    <div class="menu-card disabled" data-menu="transactions">
+    <div class="menu-card" data-menu="transactions">
       <div class="menu-icon icon-purple">📋</div>
       <div class="menu-title">거래내역</div>
       <div class="menu-desc">전체 거래 보기/검색/수정</div>
-      <span class="menu-badge badge-coming">3차 작업</span>
+      <span class="menu-badge badge-new">3차 작업</span>
     </div>
 
   </div>
@@ -302,6 +302,10 @@ function bindMenuClicks(){
       card.addEventListener('click', () => {
         if(menu === 'drive'){
           location.href = 'drive.html';
+        } else if(menu === 'add-transaction'){
+          location.href = 'add-transaction.html';
+        } else if(menu === 'transactions'){
+          location.href = 'transactions.html';
         } else {
           alert('🚧 준비 중인 기능입니다.');
         }
@@ -347,7 +351,7 @@ if(sess){
 
 // Service Worker 등록
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js?v=20260524-v3')
+  navigator.serviceWorker.register('sw.js?v=20260524-v5')
     .then(reg => console.log('[SW] 등록 완료'))
     .catch(err => console.log('[SW] 등록 실패:', err));
 }

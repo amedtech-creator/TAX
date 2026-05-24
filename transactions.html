@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>거래내역 - 세무자료 도우미</title>
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#16a34a">
+
+  <style>
+    :root{
+      --green:#16a34a;--green-dark:#15803d;--green-light:#dcfce7;
+      --red:#ef4444;--orange:#f59e0b;--blue:#3b82f6;--purple:#8b5cf6;
+      --gray:#6b7280;--gray-light:#f3f4f6;--border:#e5e7eb;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;background:#f9fafb;min-height:100vh;color:#111;}
+
+    .header{background:#fff;border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
+    .header-left{display:flex;align-items:center;gap:12px;}
+    .logo-icon{width:36px;height:36px;background:var(--purple);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;}
+    .header-title{font-size:1rem;font-weight:800;}
+    .header-sub{font-size:.7rem;color:var(--gray);}
+    .back-btn{padding:6px 12px;background:var(--gray-light);border:none;border-radius:6px;font-size:.8rem;font-weight:600;cursor:pointer;}
+    .add-btn{padding:8px 14px;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;}
+
+    .container{max-width:1100px;margin:0 auto;padding:16px 14px;}
+
+    .filter-card{background:#fff;border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:12px;}
+    .filter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;}
+    .filter-item label{display:block;font-size:.72rem;font-weight:700;color:var(--gray);margin-bottom:4px;text-transform:uppercase;}
+    .filter-item select,.filter-item input{
+      width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:.85rem;
+      outline:none;background:#fff;font-family:inherit;
+    }
+    .filter-item select:focus,.filter-item input:focus{border-color:var(--green);}
+    .filter-search{grid-column:span 2;}
+    @media(max-width:600px){.filter-search{grid-column:span 1;}}
+
+    .summary-card{background:#fff;border-radius:12px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center;}
+    .summary-info{font-size:.85rem;color:var(--gray);}
+    .summary-info strong{color:#111;font-weight:800;}
+    .summary-stats{display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;}
+    .stat-item{display:flex;flex-direction:column;align-items:center;}
+    .stat-label{font-size:.7rem;color:var(--gray);text-transform:uppercase;}
+    .stat-value{font-weight:800;font-size:.95rem;}
+    .stat-value.sale{color:var(--green-dark);}
+    .stat-value.purchase{color:var(--red);}
+    .stat-value.net{color:var(--blue);}
+
+    .tx-list{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.04);overflow:hidden;}
+    .tx-empty{padding:60px 20px;text-align:center;color:var(--gray);}
+    .tx-empty-icon{font-size:3rem;margin-bottom:10px;}
+    .tx-empty-text{font-size:.95rem;}
+
+    .tx-item{display:grid;grid-template-columns:90px 80px 80px 1fr auto auto;gap:10px;padding:12px 14px;border-bottom:1px solid var(--gray-light);align-items:center;cursor:pointer;transition:background .15s;}
+    .tx-item:hover{background:#fafbfc;}
+    .tx-item:last-child{border-bottom:none;}
+    @media(max-width:700px){
+      .tx-item{grid-template-columns:1fr 1fr;gap:6px;padding:12px;}
+      .tx-date,.tx-company,.tx-category{font-size:.75rem;}
+      .tx-vendor{grid-column:span 2;font-weight:700;}
+      .tx-amount{grid-column:span 2;text-align:right;font-size:1rem;}
+      .tx-actions{grid-column:span 2;justify-content:flex-end;display:flex;gap:6px;}
+    }
+
+    .tx-date{font-size:.82rem;color:var(--gray);font-family:monospace;}
+    .tx-company{font-size:.75rem;font-weight:700;padding:3px 7px;border-radius:5px;text-align:center;}
+    .company-AMT{background:#dbeafe;color:#1e40af;}
+    .company-KY{background:#fce7f3;color:#9d174d;}
+    .company-BEST{background:#fed7aa;color:#9a3412;}
+    .tx-category{font-size:.75rem;font-weight:600;color:var(--gray);padding:3px 7px;background:var(--gray-light);border-radius:5px;text-align:center;}
+    .tx-vendor-block{display:flex;flex-direction:column;gap:2px;min-width:0;}
+    .tx-vendor{font-size:.92rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .tx-summary{font-size:.75rem;color:var(--gray);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .tx-amount{font-size:.95rem;font-weight:800;text-align:right;white-space:nowrap;}
+    .tx-amount.income{color:var(--green-dark);}
+    .tx-amount.expense{color:var(--red);}
+    .tx-actions{display:flex;gap:4px;}
+    .tx-action-btn{background:none;border:1px solid var(--border);border-radius:5px;padding:4px 8px;font-size:.75rem;cursor:pointer;color:var(--gray);}
+    .tx-action-btn:hover{border-color:var(--green);color:var(--green-dark);}
+    .tx-action-btn.danger:hover{border-color:var(--red);color:var(--red);}
+
+    .source-badge{display:inline-block;font-size:.65rem;font-weight:700;padding:1px 5px;border-radius:3px;margin-left:4px;vertical-align:middle;}
+    .source-amt{background:#e0e7ff;color:#3730a3;}
+    .source-manual{background:var(--green-light);color:var(--green-dark);}
+    .source-template{background:#fef3c7;color:#92400e;}
+    .source-import{background:#cffafe;color:#155e75;}
+
+    .has-files{display:inline-block;font-size:.7rem;color:var(--gray);}
+
+    /* 페이지네이션 */
+    .pagination{display:flex;justify-content:center;align-items:center;gap:6px;padding:14px;}
+    .page-btn{padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:.82rem;}
+    .page-btn:hover{background:var(--gray-light);}
+    .page-btn.active{background:var(--green);color:#fff;border-color:var(--green);}
+    .page-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* 상세/수정 모달 */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:50;padding:14px;}
+    .modal-overlay.show{display:flex;}
+    .modal{background:#fff;border-radius:14px;padding:20px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;}
+    .modal-title{font-size:1.1rem;font-weight:800;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;}
+    .modal-close{background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--gray);}
+    .modal .field{margin-bottom:12px;}
+    .modal .field label{display:block;font-size:.78rem;font-weight:700;color:#374151;margin-bottom:4px;}
+    .modal .field input,.modal .field select,.modal .field textarea{
+      width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:7px;font-size:.9rem;
+      outline:none;font-family:inherit;
+    }
+    .modal .field input:focus,.modal .field select:focus,.modal .field textarea:focus{border-color:var(--green);}
+    .modal-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+    .detail-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--gray-light);font-size:.88rem;}
+    .detail-row:last-child{border-bottom:none;}
+    .detail-label{color:var(--gray);}
+    .detail-value{font-weight:600;text-align:right;max-width:60%;overflow-wrap:break-word;}
+    .file-link{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;background:var(--gray-light);border-radius:5px;font-size:.78rem;color:#374151;text-decoration:none;margin:2px 4px 2px 0;}
+    .file-link:hover{background:var(--border);}
+
+    .modal-actions{display:flex;gap:8px;margin-top:14px;justify-content:flex-end;}
+    .btn{padding:9px 16px;border:none;border-radius:8px;font-size:.88rem;font-weight:700;cursor:pointer;}
+    .btn-primary{background:var(--green);color:#fff;}
+    .btn-secondary{background:var(--gray-light);color:#374151;}
+    .btn-danger{background:var(--red);color:#fff;}
+
+    .loading{padding:40px;text-align:center;color:var(--gray);}
+    .spinner{display:inline-block;width:18px;height:18px;border:3px solid var(--blue);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:12px 20px;border-radius:8px;font-size:.88rem;z-index:200;opacity:0;transition:opacity .2s;}
+    .toast.show{opacity:1;}
+    .toast.error{background:var(--red);}
+    .toast.success{background:var(--green);}
+
+    .hidden{display:none !important;}
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <button class="back-btn" onclick="goBack()">← 메인</button>
+    <div class="logo-icon">📋</div>
+    <div>
+      <div class="header-title">거래내역</div>
+      <div class="header-sub">전체 거래 조회·검색·수정</div>
+    </div>
+  </div>
+  <button class="add-btn" onclick="goAdd()">+ 새 거래</button>
+</div>
+
+<div class="container">
+
+  <!-- 필터 -->
+  <div class="filter-card">
+    <div class="filter-grid">
+      <div class="filter-item">
+        <label>📅 월</label>
+        <select id="filterMonth" onchange="applyFilters()">
+          <option value="">전체</option>
+          <!-- JS에서 동적 생성 -->
+        </select>
+      </div>
+      <div class="filter-item">
+        <label>🏢 법인</label>
+        <select id="filterCompany" onchange="applyFilters()">
+          <option value="">전체</option>
+          <option value="AMT">AMT</option>
+          <option value="KY">KY</option>
+          <option value="BEST">BEST</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <label>📂 분류</label>
+        <select id="filterCategory" onchange="applyFilters()">
+          <option value="">전체</option>
+          <option value="01">01_매출</option>
+          <option value="02">02_매입</option>
+          <option value="03">03_경비</option>
+          <option value="04">04_급여</option>
+          <option value="05">05_금융</option>
+          <option value="06">06_주식투자</option>
+          <option value="07">07_세금</option>
+          <option value="08">08_기타</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <label>🔖 출처</label>
+        <select id="filterSource" onchange="applyFilters()">
+          <option value="">전체</option>
+          <option value="manual">수동 입력</option>
+          <option value="amt">AMT 동기화</option>
+          <option value="template">반복 거래</option>
+          <option value="import">수입통관</option>
+        </select>
+      </div>
+      <div class="filter-item filter-search">
+        <label>🔍 검색</label>
+        <input type="text" id="filterSearch" placeholder="거래처/적요/메모..." oninput="onSearchInput()">
+      </div>
+    </div>
+  </div>
+
+  <!-- 요약 카드 -->
+  <div class="summary-card">
+    <div class="summary-info">
+      총 <strong id="totalCount">0</strong>건 (필터: <strong id="filteredCount">0</strong>건)
+    </div>
+    <div class="summary-stats">
+      <div class="stat-item">
+        <span class="stat-label">매출 합계</span>
+        <span class="stat-value sale" id="totalSale">0원</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">매입+경비 합계</span>
+        <span class="stat-value purchase" id="totalExpense">0원</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">차액</span>
+        <span class="stat-value net" id="totalNet">0원</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 거래 목록 -->
+  <div class="tx-list" id="txList">
+    <div class="loading">
+      <div class="spinner"></div>
+      <div style="margin-top:8px;">거래내역 불러오는 중...</div>
+    </div>
+  </div>
+
+  <!-- 페이지네이션 -->
+  <div class="pagination" id="pagination"></div>
+
+</div>
+
+<!-- 거래 상세/수정 모달 -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="modalTitle">거래 상세</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<!-- 토스트 -->
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getDatabase, ref, get, set, update, remove, push, onValue, off } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const FB_CFG = {
+  apiKey: "AIzaSyD6kmefRjjORwWBIyDl1n105bGG7rJf8iQ",
+  authDomain: "amt-tax.firebaseapp.com",
+  databaseURL: "https://amt-tax-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "amt-tax",
+  storageBucket: "amt-tax.firebasestorage.app",
+  messagingSenderId: "759927124180",
+  appId: "1:759927124180:web:20b471702af9ee32354b41"
+};
+
+const SESSION_KEY = 'tax_auth_session';
+
+const app  = getApps().find(a=>a.name==='amt-tax-app') || initializeApp(FB_CFG, 'amt-tax-app');
+const auth = getAuth(app);
+const db   = getDatabase(app);
+
+function getSession(){
+  try{ const r=sessionStorage.getItem(SESSION_KEY); return r?JSON.parse(r):null; }catch(e){ return null; }
+}
+const sess = getSession();
+if(!sess){ location.replace('index.html'); }
+
+// 상태
+let allTransactions = [];      // 전체 거래
+let filteredTransactions = []; // 필터 적용된 거래
+const PAGE_SIZE = 30;
+let currentPage = 1;
+let txListenerRef = null;
+
+// 카테고리/거래유형/결제수단 라벨
+const CATEGORY_LABEL = {
+  '01':'매출','02':'매입','03':'경비','04':'급여',
+  '05':'금융','06':'주식투자','07':'세금','08':'기타'
+};
+const TX_TYPE_LABEL = {
+  income:'입금', expense:'출금/지급', sale:'매출', purchase:'매입',
+  cost:'경비', salary:'급여', investment:'투자', transfer:'이체',
+  tax:'세금납부', other:'기타'
+};
+const PAYMENT_LABEL = {
+  cash:'현금', transfer:'계좌이체', card:'법인카드',
+  foreign:'외환송금', other:'기타'
+};
+const SOURCE_LABEL = {
+  manual:'수동 입력', amt:'AMT 동기화',
+  template:'반복 거래', import:'수입통관'
+};
+
+// ============ 헬퍼 ============
+window.goBack = () => { location.href = 'main.html'; };
+window.goAdd = () => { location.href = 'add-transaction.html'; };
+
+function escapeHtml(s){
+  if(s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function jsAttr(v){
+  return JSON.stringify(v == null ? '' : v).replace(/"/g,'&quot;');
+}
+function fmt(n){
+  return (n || 0).toLocaleString('ko-KR');
+}
+function showToast(msg, type){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type || '');
+  setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+// ============ 거래 데이터 로드 (실시간) ============
+function startListener(){
+  const r = ref(db, 'tax_helper/transactions');
+  txListenerRef = r;
+  onValue(r, snap => {
+    const data = snap.val() || {};
+    allTransactions = Object.entries(data).map(([id, t]) => ({...t, id}))
+      .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.createdAt || 0) - (a.createdAt || 0));
+    rebuildMonthFilter();
+    applyFilters();
+  }, err => {
+    console.error('거래 데이터 로드 실패:', err);
+    showToast('데이터 로드 실패: ' + err.message, 'error');
+  });
+}
+
+function rebuildMonthFilter(){
+  const sel = document.getElementById('filterMonth');
+  const prev = sel.value;
+  const months = new Set();
+  allTransactions.forEach(t => { if(t.month) months.add(t.month); });
+  const sorted = Array.from(months).sort().reverse();
+  sel.innerHTML = '<option value="">전체</option>' + 
+    sorted.map(m => `<option value="${m}" ${m===prev?'selected':''}>${m.replace('_','년 ') + '월'}</option>`).join('');
+}
+
+// ============ 필터 적용 ============
+let searchTimer = null;
+window.onSearchInput = () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(applyFilters, 200);
+};
+
+window.applyFilters = () => {
+  const m = document.getElementById('filterMonth').value;
+  const c = document.getElementById('filterCompany').value;
+  const cat = document.getElementById('filterCategory').value;
+  const src = document.getElementById('filterSource').value;
+  const q = (document.getElementById('filterSearch').value || '').trim().toLowerCase();
+
+  filteredTransactions = allTransactions.filter(t => {
+    if(m && t.month !== m) return false;
+    if(c && t.company !== c) return false;
+    if(cat && t.category !== cat) return false;
+    if(src){
+      const txSrc = t.sourceSystem || 'manual';
+      if(txSrc !== src) return false;
+    }
+    if(q){
+      const hay = [t.vendor, t.summary, t.memo].filter(Boolean).join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  currentPage = 1;
+  renderList();
+  renderSummary();
+};
+
+// ============ 요약 표시 ============
+function renderSummary(){
+  document.getElementById('totalCount').textContent = allTransactions.length;
+  document.getElementById('filteredCount').textContent = filteredTransactions.length;
+
+  let totalSale = 0;
+  let totalExpense = 0;
+  filteredTransactions.forEach(t => {
+    if(t.category === '01') totalSale += (t.amount || 0);
+    else if(t.category === '02' || t.category === '03') totalExpense += (t.amount || 0);
+  });
+
+  document.getElementById('totalSale').textContent = fmt(totalSale) + '원';
+  document.getElementById('totalExpense').textContent = fmt(totalExpense) + '원';
+  const net = totalSale - totalExpense;
+  document.getElementById('totalNet').textContent = (net >= 0 ? '+' : '') + fmt(net) + '원';
+}
+
+// ============ 목록 렌더링 ============
+function renderList(){
+  const list = document.getElementById('txList');
+  if(filteredTransactions.length === 0){
+    list.innerHTML = `
+      <div class="tx-empty">
+        <div class="tx-empty-icon">📭</div>
+        <div class="tx-empty-text">조건에 맞는 거래가 없습니다</div>
+      </div>`;
+    document.getElementById('pagination').innerHTML = '';
+    return;
+  }
+
+  const totalPages = Math.ceil(filteredTransactions.length / PAGE_SIZE);
+  if(currentPage > totalPages) currentPage = totalPages;
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const pageItems = filteredTransactions.slice(start, start + PAGE_SIZE);
+
+  list.innerHTML = pageItems.map(t => {
+    const company = escapeHtml(t.company || '-');
+    const cat = CATEGORY_LABEL[t.category] || '-';
+    const vendor = escapeHtml(t.vendor || '(거래처 미입력)');
+    const summary = escapeHtml(t.summary || '');
+    const isIncome = (t.category === '01') || (t.txType === 'income' || t.txType === 'sale');
+    const amtClass = isIncome ? 'income' : 'expense';
+    const amtPrefix = isIncome ? '+' : '-';
+    const src = t.sourceSystem || 'manual';
+    const srcLabel = SOURCE_LABEL[src] || '수동';
+    const hasFiles = (t.attachments && t.attachments.length > 0);
+    return `
+      <div class="tx-item" onclick="openDetail(${jsAttr(t.id)})">
+        <div class="tx-date">${escapeHtml((t.date || '').slice(5))}</div>
+        <div class="tx-company company-${company}">${company}</div>
+        <div class="tx-category">${escapeHtml(cat)}</div>
+        <div class="tx-vendor-block">
+          <div class="tx-vendor">${vendor}<span class="source-badge source-${src}">${escapeHtml(srcLabel)}</span></div>
+          <div class="tx-summary">${summary}${hasFiles ? ' · <span class="has-files">📎' + t.attachments.length + '</span>' : ''}</div>
+        </div>
+        <div class="tx-amount ${amtClass}">${amtPrefix}${fmt(t.amount || 0)}원</div>
+        <div class="tx-actions">
+          <button class="tx-action-btn" onclick="event.stopPropagation();openEdit(${jsAttr(t.id)})">수정</button>
+          <button class="tx-action-btn danger" onclick="event.stopPropagation();confirmDelete(${jsAttr(t.id)})">삭제</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  renderPagination(totalPages);
+}
+
+function renderPagination(totalPages){
+  const p = document.getElementById('pagination');
+  if(totalPages <= 1){ p.innerHTML = ''; return; }
+  let html = `<button class="page-btn" onclick="changePage(${currentPage-1})" ${currentPage===1?'disabled':''}>‹</button>`;
+  // 최대 5개 페이지 버튼만 표시
+  const maxButtons = 5;
+  let startPage = Math.max(1, currentPage - 2);
+  let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+  if(endPage - startPage + 1 < maxButtons) startPage = Math.max(1, endPage - maxButtons + 1);
+  for(let i = startPage; i <= endPage; i++){
+    html += `<button class="page-btn ${i===currentPage?'active':''}" onclick="changePage(${i})">${i}</button>`;
+  }
+  html += `<button class="page-btn" onclick="changePage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>›</button>`;
+  html += `<span style="font-size:.75rem;color:#6b7280;margin-left:8px;">${currentPage}/${totalPages}</span>`;
+  p.innerHTML = html;
+}
+
+window.changePage = (p) => {
+  const totalPages = Math.ceil(filteredTransactions.length / PAGE_SIZE);
+  if(p < 1 || p > totalPages) return;
+  currentPage = p;
+  renderList();
+  window.scrollTo(0, 0);
+};
+
+// ============ 상세 보기 ============
+window.openDetail = (id) => {
+  const t = allTransactions.find(x => x.id === id);
+  if(!t){ showToast('거래를 찾을 수 없습니다', 'error'); return; }
+
+  const src = t.sourceSystem || 'manual';
+  const srcLabel = SOURCE_LABEL[src] || '수동';
+  const isAuto = (src === 'amt' || src === 'template');
+
+  let attachmentsHtml = '';
+  if(t.attachments && t.attachments.length > 0){
+    attachmentsHtml = '<div style="margin-top:8px;">' + t.attachments.map(f =>
+      `<a class="file-link" href="https://drive.google.com/file/d/${escapeHtml(f.driveFileId)}/view" target="_blank">📄 ${escapeHtml(f.name)}</a>`
+    ).join('') + '</div>';
+  }
+
+  let historyHtml = '';
+  if(t.history && t.history.length > 0){
+    historyHtml = '<div style="margin-top:10px;font-size:.78rem;color:#6b7280;">변경 이력: ' + t.history.length + '회</div>';
+  }
+
+  document.getElementById('modalTitle').textContent = '거래 상세';
+  document.getElementById('modalContent').innerHTML = `
+    <div class="detail-row"><span class="detail-label">거래일자</span><span class="detail-value">${escapeHtml(t.date || '-')}</span></div>
+    <div class="detail-row"><span class="detail-label">법인</span><span class="detail-value">${escapeHtml(t.company || '-')}</span></div>
+    <div class="detail-row"><span class="detail-label">분류</span><span class="detail-value">${escapeHtml(CATEGORY_LABEL[t.category] || '-')}</span></div>
+    <div class="detail-row"><span class="detail-label">거래유형</span><span class="detail-value">${escapeHtml(TX_TYPE_LABEL[t.txType] || '-')}</span></div>
+    <div class="detail-row"><span class="detail-label">금액</span><span class="detail-value" style="font-size:1.05rem;font-weight:800;">${fmt(t.amount || 0)}원</span></div>
+    ${t.vatIncluded ? `
+      <div class="detail-row"><span class="detail-label">└ 공급가액</span><span class="detail-value">${fmt(t.supplyAmount || 0)}원</span></div>
+      <div class="detail-row"><span class="detail-label">└ 부가세</span><span class="detail-value">${fmt(t.vatAmount || 0)}원</span></div>
+    ` : ''}
+    <div class="detail-row"><span class="detail-label">거래처</span><span class="detail-value">${escapeHtml(t.vendor || '-')}</span></div>
+    <div class="detail-row"><span class="detail-label">적요</span><span class="detail-value">${escapeHtml(t.summary || '-')}</span></div>
+    <div class="detail-row"><span class="detail-label">결제수단</span><span class="detail-value">${escapeHtml(PAYMENT_LABEL[t.payment] || '-')}</span></div>
+    <div class="detail-row"><span class="detail-label">메모</span><span class="detail-value">${escapeHtml(t.memo || '-')}</span></div>
+    <div class="detail-row"><span class="detail-label">출처</span><span class="detail-value"><span class="source-badge source-${src}">${escapeHtml(srcLabel)}</span></span></div>
+    ${t.sourceId ? `<div class="detail-row"><span class="detail-label">AMT 원본 ID</span><span class="detail-value" style="font-family:monospace;font-size:.75rem;">${escapeHtml(t.sourceId)}</span></div>` : ''}
+    <div class="detail-row"><span class="detail-label">생성자</span><span class="detail-value">${escapeHtml(t.createdByName || t.createdBy || '-')}</span></div>
+    <div class="detail-row"><span class="detail-label">생성일시</span><span class="detail-value">${t.createdAt ? new Date(t.createdAt).toLocaleString('ko-KR') : '-'}</span></div>
+    ${attachmentsHtml ? `<div class="detail-row"><span class="detail-label">첨부파일</span><span class="detail-value">${t.attachments.length}개</span></div>${attachmentsHtml}` : ''}
+    ${historyHtml}
+    ${isAuto ? `<div style="margin-top:12px;padding:10px;background:#fef3c7;border-radius:8px;font-size:.8rem;color:#92400e;">ℹ️ 이 거래는 ${srcLabel}된 거래입니다. 금액·날짜 등 핵심 정보가 원본에서 변경되면 자동 갱신됩니다.</div>` : ''}
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">닫기</button>
+      <button class="btn btn-primary" onclick="openEdit(${jsAttr(t.id)})">수정</button>
+    </div>
+  `;
+  document.getElementById('detailModal').classList.add('show');
+};
+
+// ============ 수정 ============
+
+// 수정 폼에서 분류 변경 시 거래유형 + 부가세 자동 매칭
+const CATEGORY_TO_TX_TYPE_EDIT = {
+  '01':'sale','02':'purchase','03':'cost','04':'salary',
+  '05':'transfer','06':'investment','07':'tax','08':'other'
+};
+const VAT_DEFAULT_BY_CATEGORY_EDIT = {
+  '01':true,'02':true,'03':false,'04':false,
+  '05':false,'06':false,'07':false,'08':false
+};
+
+window.onEditCategoryChange = () => {
+  const cat = document.getElementById('editCategory').value;
+  if(!cat) return;
+  // 거래유형 자동 매칭
+  const txTypeEl = document.getElementById('editTxType');
+  if(CATEGORY_TO_TX_TYPE_EDIT[cat]){
+    txTypeEl.value = CATEGORY_TO_TX_TYPE_EDIT[cat];
+  }
+  // 부가세 자동 토글
+  const vatEl = document.getElementById('editVatIncluded');
+  if(cat in VAT_DEFAULT_BY_CATEGORY_EDIT){
+    vatEl.checked = VAT_DEFAULT_BY_CATEGORY_EDIT[cat];
+  }
+};
+
+window.openEdit = (id) => {
+  const t = allTransactions.find(x => x.id === id);
+  if(!t){ showToast('거래를 찾을 수 없습니다', 'error'); return; }
+
+  const src = t.sourceSystem || 'manual';
+  const isAuto = (src === 'amt');
+
+  document.getElementById('modalTitle').textContent = '거래 수정';
+  document.getElementById('modalContent').innerHTML = `
+    ${isAuto ? `<div style="margin-bottom:12px;padding:10px;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;font-size:.8rem;color:#92400e;">⚠️ AMT 동기화 거래입니다. 금액/날짜를 수정해도 다음 동기화 시 AMT 원본 값으로 자동 갱신됩니다.<br>분류/메모 등 세무 앱 자체 정보만 수정하세요.</div>` : ''}
+
+    <div class="modal-row">
+      <div class="field">
+        <label>거래일자</label>
+        <input type="date" id="editDate" value="${escapeHtml(t.date || '')}">
+      </div>
+      <div class="field">
+        <label>법인</label>
+        <select id="editCompany">
+          <option value="AMT" ${t.company==='AMT'?'selected':''}>AMT</option>
+          <option value="KY" ${t.company==='KY'?'selected':''}>KY</option>
+          <option value="BEST" ${t.company==='BEST'?'selected':''}>BEST</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="modal-row">
+      <div class="field">
+        <label>분류</label>
+        <select id="editCategory" onchange="onEditCategoryChange()">
+          ${['01','02','03','04','05','06','07','08'].map(k =>
+            `<option value="${k}" ${t.category===k?'selected':''}>${k}_${CATEGORY_LABEL[k]}</option>`
+          ).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>거래유형</label>
+        <select id="editTxType">
+          ${Object.keys(TX_TYPE_LABEL).map(k =>
+            `<option value="${k}" ${t.txType===k?'selected':''}>${TX_TYPE_LABEL[k]}</option>`
+          ).join('')}
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>금액 (원)</label>
+      <input type="text" id="editAmount" value="${fmt(t.amount || 0)}" oninput="this.value=Number(this.value.replace(/[^0-9]/g,'')||0).toLocaleString('ko-KR');">
+      <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:.85rem;">
+        <input type="checkbox" id="editVatIncluded" ${t.vatIncluded?'checked':''}>
+        <label for="editVatIncluded">부가세 포함 (10%)</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>거래처</label>
+      <input type="text" id="editVendor" value="${escapeHtml(t.vendor || '')}">
+    </div>
+
+    <div class="field">
+      <label>적요</label>
+      <input type="text" id="editSummary" value="${escapeHtml(t.summary || '')}">
+    </div>
+
+    <div class="field">
+      <label>결제수단</label>
+      <select id="editPayment">
+        ${Object.keys(PAYMENT_LABEL).map(k =>
+          `<option value="${k}" ${t.payment===k?'selected':''}>${PAYMENT_LABEL[k]}</option>`
+        ).join('')}
+      </select>
+    </div>
+
+    <div class="field">
+      <label>메모</label>
+      <textarea id="editMemo" rows="3">${escapeHtml(t.memo || '')}</textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">취소</button>
+      <button class="btn btn-primary" onclick="doUpdate(${jsAttr(t.id)})">💾 저장</button>
+    </div>
+  `;
+  document.getElementById('detailModal').classList.add('show');
+};
+
+window.doUpdate = async (id) => {
+  const t = allTransactions.find(x => x.id === id);
+  if(!t){ showToast('거래를 찾을 수 없습니다', 'error'); return; }
+
+  // 더블 클릭 방지: 모달의 저장 버튼 비활성화
+  const btns = document.querySelectorAll('#detailModal .btn');
+  btns.forEach(b => b.disabled = true);
+
+  const date = document.getElementById('editDate').value;
+  const company = document.getElementById('editCompany').value;
+  const category = document.getElementById('editCategory').value;
+  const txType = document.getElementById('editTxType').value;
+  const amount = parseInt(document.getElementById('editAmount').value.replace(/[^0-9]/g, ''), 10) || 0;
+  const vatIncluded = document.getElementById('editVatIncluded').checked;
+  const vendor = document.getElementById('editVendor').value.trim();
+  const summary = document.getElementById('editSummary').value.trim();
+  const payment = document.getElementById('editPayment').value;
+  const memo = document.getElementById('editMemo').value.trim();
+
+  if(!date || !company || !category || !txType || !amount){
+    showToast('필수 항목을 입력해주세요', 'error');
+    btns.forEach(b => b.disabled = false);
+    return;
+  }
+
+  try{
+    // 변경 이력 추적
+    const history = t.history || [];
+    const changes = {};
+    if(t.date !== date) changes.date = { from: t.date, to: date };
+    if(t.amount !== amount) changes.amount = { from: t.amount, to: amount };
+    if(t.category !== category) changes.category = { from: t.category, to: category };
+    if(t.vendor !== vendor) changes.vendor = { from: t.vendor, to: vendor };
+    if(t.vatIncluded !== vatIncluded) changes.vatIncluded = { from: t.vatIncluded, to: vatIncluded };
+    if(Object.keys(changes).length > 0){
+      history.push({ updatedAt: Date.now(), updatedBy: sess.email, changes });
+    }
+
+    // 부가세 재계산 (사용자가 변경한 값 기준)
+    const supplyAmount = vatIncluded ? Math.round(amount / 1.1) : amount;
+    const vatAmount = vatIncluded ? amount - supplyAmount : 0;
+
+    // 월 재계산
+    const month = `${date.slice(0,4)}_${date.slice(5,7)}`;
+
+    await update(ref(db, 'tax_helper/transactions/' + id), {
+      date, company, category, txType, amount,
+      vatIncluded, supplyAmount, vatAmount,
+      vendor: vendor || null,
+      summary: summary || null, payment, memo: memo || null,
+      month,
+      history,
+      updatedAt: Date.now(),
+      updatedBy: sess.email
+    });
+
+    // 감사 로그
+    try{
+      const auditRef = push(ref(db, 'tax_helper/audit'));
+      await set(auditRef, {
+        action: 'tx_update',
+        user: sess.email,
+        target: id,
+        timestamp: Date.now()
+      });
+    }catch(e){ console.warn('감사 로그 실패:', e); }
+
+    closeModal();
+    showToast('✅ 거래 수정 완료', 'success');
+  }catch(e){
+    console.error('수정 실패:', e);
+    showToast('❌ 수정 실패: ' + e.message, 'error');
+    // 버튼 재활성화
+    const btns2 = document.querySelectorAll('#detailModal .btn');
+    btns2.forEach(b => b.disabled = false);
+  }
+};
+
+// ============ 삭제 ============
+window.confirmDelete = (id) => {
+  const t = allTransactions.find(x => x.id === id);
+  if(!t){ showToast('거래를 찾을 수 없습니다', 'error'); return; }
+
+  const src = t.sourceSystem || 'manual';
+  let warn = `이 거래를 삭제하시겠습니까?\n\n${t.date || ''} ${t.company || ''} ${fmt(t.amount || 0)}원\n${t.vendor || ''}`;
+  if(src === 'amt'){
+    warn += '\n\n⚠️ AMT 동기화 거래입니다. 삭제하면 다음 동기화 시 다시 추가됩니다.';
+  }
+  if(t.attachments && t.attachments.length > 0){
+    warn += `\n\n📎 첨부파일 ${t.attachments.length}개가 함께 사라집니다 (Drive 파일은 그대로 남음).`;
+  }
+  if(!confirm(warn)) return;
+
+  doDelete(id);
+};
+
+async function doDelete(id){
+  try{
+    const t = allTransactions.find(x => x.id === id);
+    await remove(ref(db, 'tax_helper/transactions/' + id));
+
+    // AMT 동기화 거래라면, "삭제 표시" 노드에 기록해서 다음 동기화 때 자동 복원 안 되게
+    if(t && t.sourceSystem === 'amt' && t.sourceId){
+      await set(ref(db, 'tax_helper/syncDeleted/' + t.sourceId), {
+        deletedAt: Date.now(),
+        deletedBy: sess.email,
+        originalDate: t.date,
+        originalAmount: t.amount
+      });
+    }
+
+    // 감사 로그
+    try{
+      const auditRef = push(ref(db, 'tax_helper/audit'));
+      await set(auditRef, {
+        action: 'tx_delete',
+        user: sess.email,
+        target: id,
+        details: `${t?.date} ${t?.company} ${fmt(t?.amount || 0)}원`,
+        timestamp: Date.now()
+      });
+    }catch(e){ console.warn('감사 로그 실패:', e); }
+
+    showToast('🗑️ 거래 삭제됨', 'success');
+  }catch(e){
+    console.error('삭제 실패:', e);
+    showToast('❌ 삭제 실패: ' + e.message, 'error');
+  }
+}
+
+// ============ 모달 닫기 ============
+window.closeModal = () => {
+  document.getElementById('detailModal').classList.remove('show');
+};
+
+// 모달 배경 클릭 시 닫기
+document.getElementById('detailModal').addEventListener('click', e => {
+  if(e.target.id === 'detailModal') closeModal();
+});
+
+// ESC 키로 닫기
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') closeModal();
+});
+
+// ============ 시작 ============
+onAuthStateChanged(auth, user => {
+  if(!user){
+    alert('Firebase 세션이 만료되었습니다. 다시 로그인해주세요.');
+    location.replace('index.html');
+    return;
+  }
+  startListener();
+});
+
+// Service Worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js?v=20260524-v5')
+    .then(reg => console.log('[SW] 등록 완료'))
+    .catch(err => console.log('[SW] 등록 실패:', err));
+}
+</script>
+
+</body>
+</html>

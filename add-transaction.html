@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>거래 입력 - 세무자료 도우미</title>
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#16a34a">
+
+  <style>
+    :root{
+      --green:#16a34a;--green-dark:#15803d;--green-light:#dcfce7;
+      --red:#ef4444;--orange:#f59e0b;--blue:#3b82f6;
+      --gray:#6b7280;--gray-light:#f3f4f6;--border:#e5e7eb;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;background:#f9fafb;min-height:100vh;color:#111;}
+
+    .header{background:#fff;border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
+    .header-left{display:flex;align-items:center;gap:12px;}
+    .logo-icon{width:36px;height:36px;background:var(--blue);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;}
+    .header-title{font-size:1rem;font-weight:800;}
+    .header-sub{font-size:.7rem;color:var(--gray);}
+    .back-btn{padding:6px 12px;background:var(--gray-light);border:none;border-radius:6px;font-size:.8rem;font-weight:600;cursor:pointer;}
+
+    .container{max-width:700px;margin:0 auto;padding:20px;}
+
+    .form-card{background:#fff;border-radius:14px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:16px;}
+    .form-title{font-size:1.2rem;font-weight:800;margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+    .form-sub{font-size:.85rem;color:var(--gray);margin-bottom:20px;}
+
+    .field{margin-bottom:16px;}
+    .field label{display:block;font-size:.85rem;font-weight:700;color:#374151;margin-bottom:6px;}
+    .field .required{color:var(--red);margin-left:2px;}
+    .field input[type=text],.field input[type=date],.field input[type=number],.field select,.field textarea{
+      width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:9px;font-size:.95rem;
+      outline:none;transition:border .2s;background:#fff;font-family:inherit;
+    }
+    .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--green);}
+    .field textarea{resize:vertical;min-height:64px;}
+
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    @media(max-width:500px){.row{grid-template-columns:1fr;}}
+
+    .company-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+    .company-btn{padding:14px 8px;border:2px solid var(--border);border-radius:10px;background:#fff;cursor:pointer;text-align:center;font-weight:700;transition:all .15s;}
+    .company-btn:hover{border-color:var(--blue);}
+    .company-btn.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+    .company-btn-name{font-size:.95rem;}
+    .company-btn-full{font-size:.7rem;font-weight:500;margin-top:2px;opacity:.8;}
+
+    .checkbox-row{display:flex;align-items:center;gap:8px;font-size:.88rem;color:#374151;margin-top:-4px;}
+    .checkbox-row input{width:16px;height:16px;}
+
+    .amount-input{font-size:1.1rem;font-weight:700;text-align:right;}
+    .vat-breakdown{margin-top:8px;padding:10px 12px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;font-size:.82rem;color:#0c4a6e;display:none;}
+    .vat-breakdown.show{display:block;}
+    .vat-row{display:flex;justify-content:space-between;padding:3px 0;}
+    .vat-row.total{border-top:1px dashed #7dd3fc;margin-top:4px;padding-top:6px;font-weight:700;}
+
+    .file-upload{border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:border .2s;}
+    .file-upload:hover{border-color:var(--blue);background:#f0f9ff;}
+    .file-upload-icon{font-size:1.5rem;margin-bottom:6px;}
+    .file-upload-text{font-size:.85rem;color:var(--gray);}
+    .file-upload input[type=file]{display:none;}
+    .file-list{margin-top:10px;}
+    .file-item{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--gray-light);border-radius:6px;margin-bottom:6px;font-size:.82rem;}
+    .file-item .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .file-item .size{color:var(--gray);font-size:.78rem;}
+    .file-item .remove{background:none;border:none;color:var(--red);cursor:pointer;font-size:1rem;padding:0 4px;}
+
+    .auto-suggest{position:relative;}
+    .suggest-list{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.08);max-height:180px;overflow-y:auto;z-index:5;display:none;}
+    .suggest-list.show{display:block;}
+    .suggest-item{padding:8px 12px;cursor:pointer;font-size:.85rem;}
+    .suggest-item:hover,.suggest-item.active{background:var(--gray-light);}
+
+    .btn{padding:12px 20px;border:none;border-radius:10px;font-size:.95rem;font-weight:700;cursor:pointer;transition:opacity .2s;}
+    .btn-primary{background:var(--green);color:#fff;}
+    .btn-primary:hover{opacity:.9;}
+    .btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+    .btn-secondary{background:var(--gray-light);color:#374151;}
+    .btn-block{display:flex;width:100%;justify-content:center;align-items:center;gap:8px;}
+
+    .action-row{display:flex;gap:10px;margin-top:8px;}
+    .action-row .btn{flex:1;}
+
+    .info-banner{padding:12px 14px;border-radius:9px;font-size:.82rem;line-height:1.5;margin-bottom:16px;display:flex;gap:8px;align-items:flex-start;}
+    .info-banner.warn{background:#fef3c7;border:1px solid #fde68a;color:#92400e;}
+    .info-banner.info{background:#dbeafe;border:1px solid #bfdbfe;color:#1e40af;}
+    .info-banner.error{background:#fee2e2;border:1px solid #fecaca;color:#991b1b;}
+
+    .progress-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:100;}
+    .progress-overlay.show{display:flex;}
+    .progress-modal{background:#fff;border-radius:14px;padding:24px;max-width:380px;width:90%;}
+    .progress-title{font-size:1rem;font-weight:800;margin-bottom:14px;}
+    .progress-item{padding:6px 0;font-size:.85rem;}
+    .progress-item.done{color:var(--green-dark);}
+    .progress-item.doing{color:var(--blue);}
+    .progress-item.error{color:var(--red);}
+    .spinner{display:inline-block;width:12px;height:12px;border:2px solid var(--blue);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    .hidden{display:none !important;}
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <button class="back-btn" onclick="goBack()">← 메인</button>
+    <div class="logo-icon">➕</div>
+    <div>
+      <div class="header-title">새 거래 입력</div>
+      <div class="header-sub">매출/매입/경비 등 거래내역 추가</div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Drive 미연결 경고 -->
+  <div class="info-banner warn hidden" id="driveWarning">
+    <span>⚠️</span>
+    <div>
+      <strong>Google Drive가 연결되지 않았습니다.</strong><br>
+      거래는 저장되지만 영수증/세금계산서 파일은 첨부할 수 없습니다.
+      <a href="drive.html" style="color:inherit;text-decoration:underline;font-weight:700;">→ Drive 연결하기</a>
+    </div>
+  </div>
+
+  <!-- 폴더 미생성 경고 -->
+  <div class="info-banner error hidden" id="folderWarning">
+    <span>❌</span>
+    <div>
+      <strong>폴더가 아직 생성되지 않았습니다.</strong><br>
+      먼저 Drive 페이지에서 폴더 자동 생성을 진행해주세요.
+      <a href="drive.html" style="color:inherit;text-decoration:underline;font-weight:700;">→ 폴더 생성하기</a>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <div class="form-title">📝 거래 정보 입력</div>
+    <div class="form-sub">필수 항목(<span style="color:#ef4444">*</span>)을 모두 입력해주세요.</div>
+
+    <!-- 거래일자 + 법인 -->
+    <div class="row">
+      <div class="field">
+        <label>📅 거래일자 <span class="required">*</span></label>
+        <input type="date" id="txDate" required>
+      </div>
+      <div class="field">
+        <label>💳 결제수단</label>
+        <select id="payment">
+          <option value="cash">현금</option>
+          <option value="transfer" selected>계좌이체</option>
+          <option value="card">법인카드</option>
+          <option value="foreign">외환송금</option>
+          <option value="other">기타</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 법인 선택 (큰 버튼) -->
+    <div class="field">
+      <label>🏢 법인 <span class="required">*</span></label>
+      <div class="company-buttons">
+        <div class="company-btn" data-company="AMT" onclick="selectCompany('AMT')">
+          <div class="company-btn-name">AMT</div>
+          <div class="company-btn-full">에이엠티코리아</div>
+        </div>
+        <div class="company-btn" data-company="KY" onclick="selectCompany('KY')">
+          <div class="company-btn-name">KY</div>
+          <div class="company-btn-full">케이와이메디칼</div>
+        </div>
+        <div class="company-btn" data-company="BEST" onclick="selectCompany('BEST')">
+          <div class="company-btn-name">BEST</div>
+          <div class="company-btn-full">반품 처리</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 분류 + 거래유형 -->
+    <div class="row">
+      <div class="field">
+        <label>📂 분류 (저장 폴더) <span class="required">*</span></label>
+        <select id="category" required onchange="onCategoryChange()">
+          <option value="">선택...</option>
+          <option value="01">01_매출</option>
+          <option value="02">02_매입</option>
+          <option value="03">03_경비</option>
+          <option value="04">04_급여</option>
+          <option value="05">05_금융</option>
+          <option value="06">06_주식투자</option>
+          <option value="07">07_세금</option>
+          <option value="08">08_기타</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>💰 거래유형 <span class="required">*</span></label>
+        <select id="txType" required onchange="onTxTypeChange()">
+          <option value="">선택...</option>
+          <option value="income">입금</option>
+          <option value="expense">출금/지급</option>
+          <option value="sale">매출</option>
+          <option value="purchase">매입</option>
+          <option value="cost">경비</option>
+          <option value="salary">급여</option>
+          <option value="investment">투자</option>
+          <option value="transfer">이체</option>
+          <option value="tax">세금납부</option>
+          <option value="other">기타</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 금액 -->
+    <div class="field">
+      <label>💵 금액 <span class="required">*</span> (원)</label>
+      <input type="text" id="amount" class="amount-input" placeholder="0" inputmode="numeric" oninput="onAmountInput(this)">
+      <div class="checkbox-row" style="margin-top:8px;">
+        <input type="checkbox" id="vatIncluded" checked>
+        <label for="vatIncluded">부가세 포함 금액 (10%)</label>
+      </div>
+      <div class="vat-breakdown" id="vatBreakdown">
+        <div class="vat-row"><span>공급가액</span><span id="supplyAmount">0원</span></div>
+        <div class="vat-row"><span>부가세</span><span id="vatAmount">0원</span></div>
+        <div class="vat-row total"><span>합계</span><span id="totalAmount">0원</span></div>
+      </div>
+    </div>
+
+    <!-- 거래처 (자동완성) -->
+    <div class="field">
+      <label>🏪 거래처</label>
+      <div class="auto-suggest">
+        <input type="text" id="vendor" placeholder="예: 한솔테크" autocomplete="off"
+          oninput="onVendorInput(this)" onblur="setTimeout(()=>hideSuggest(),200)">
+        <div class="suggest-list" id="suggestList"></div>
+      </div>
+    </div>
+
+    <!-- 적요 -->
+    <div class="field">
+      <label>📝 적요</label>
+      <input type="text" id="summary" placeholder="예: 사무용품 구매">
+    </div>
+
+    <!-- 증빙 첨부 -->
+    <div class="field">
+      <label>📎 증빙 첨부 (영수증, 세금계산서 등)</label>
+      <label class="file-upload" for="fileInput">
+        <input type="file" id="fileInput" multiple accept="image/*,application/pdf" onchange="onFileChange(this)">
+        <div class="file-upload-icon">📤</div>
+        <div class="file-upload-text">클릭해서 파일 선택<br>(이미지, PDF · 여러 개 가능)</div>
+      </label>
+      <div class="file-list" id="fileList"></div>
+    </div>
+
+    <!-- 메모 -->
+    <div class="field">
+      <label>💬 메모 (상세 설명)</label>
+      <textarea id="memo" placeholder="추가 정보, 메모..."></textarea>
+    </div>
+
+    <!-- 버튼 -->
+    <div class="action-row">
+      <button class="btn btn-secondary" onclick="goBack()">취소</button>
+      <button class="btn btn-primary" id="btnSave" onclick="doSave()">💾 저장</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- 진행 상황 모달 -->
+<div class="progress-overlay" id="progressOverlay">
+  <div class="progress-modal">
+    <div class="progress-title">📤 저장 중...</div>
+    <div id="progressContent"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getDatabase, ref, get, set, push, update, query, orderByChild, limitToLast } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const FB_CFG = {
+  apiKey: "AIzaSyD6kmefRjjORwWBIyDl1n105bGG7rJf8iQ",
+  authDomain: "amt-tax.firebaseapp.com",
+  databaseURL: "https://amt-tax-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "amt-tax",
+  storageBucket: "amt-tax.firebasestorage.app",
+  messagingSenderId: "759927124180",
+  appId: "1:759927124180:web:20b471702af9ee32354b41"
+};
+
+const SESSION_KEY    = 'tax_auth_session';
+const DRIVE_TOKEN_KEY = 'tax_drive_token';
+
+const app  = getApps().find(a=>a.name==='amt-tax-app') || initializeApp(FB_CFG, 'amt-tax-app');
+const auth = getAuth(app);
+const db   = getDatabase(app);
+
+// 세션 확인
+function getSession(){
+  try{ const r=sessionStorage.getItem(SESSION_KEY); return r?JSON.parse(r):null; }catch(e){ return null; }
+}
+const sess = getSession();
+if(!sess){ location.replace('index.html'); }
+
+// 상태
+let selectedCompany = null;
+let selectedFiles = [];
+let vendorList = [];
+let companiesSettings = null;
+let driveToken = null;
+
+// ============ 초기화 ============
+window.goBack = () => { location.href = 'main.html'; };
+
+// 오늘 날짜 기본값
+const todayStr = (() => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+})();
+document.getElementById('txDate').value = todayStr;
+
+// ============ Drive 토큰 복구 ============
+function restoreDriveToken(){
+  try{
+    const raw = sessionStorage.getItem(DRIVE_TOKEN_KEY);
+    if(!raw) return null;
+    const data = JSON.parse(raw);
+    if(data.expiresAt && Date.now() > data.expiresAt) return null;
+    return data.token;
+  }catch(e){ return null; }
+}
+
+// ============ Drive 상태 + 폴더 설정 로드 ============
+async function loadDriveState(){
+  try{
+    // Drive 연결 상태
+    const stSnap = await get(ref(db, 'tax_helper/driveAuth/status'));
+    const connected = stSnap.exists() && stSnap.val()?.connected === true;
+    if(!connected){
+      document.getElementById('driveWarning').classList.remove('hidden');
+    }
+
+    // 폴더 설정
+    const cSnap = await get(ref(db, 'tax_helper/settings/companies'));
+    if(!cSnap.exists()){
+      document.getElementById('folderWarning').classList.remove('hidden');
+    } else {
+      companiesSettings = cSnap.val();
+    }
+
+    // Drive 토큰 (sessionStorage에서)
+    driveToken = restoreDriveToken();
+  }catch(e){
+    console.warn('Drive 상태 로드 실패:', e);
+  }
+}
+
+// ============ 거래처 목록 로드 (자동완성용) ============
+async function loadVendors(){
+  try{
+    const snap = await get(ref(db, 'tax_helper/vendors'));
+    if(snap.exists()){
+      const data = snap.val();
+      vendorList = Object.keys(data).map(k => ({ name: k, count: data[k].count || 0 }))
+        .sort((a,b) => b.count - a.count);
+    }
+  }catch(e){ console.warn('거래처 로드 실패:', e); }
+}
+
+// ============ 법인 선택 ============
+window.selectCompany = (comp) => {
+  selectedCompany = comp;
+  document.querySelectorAll('.company-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.company === comp);
+  });
+};
+
+// ============ 분류 변경 시 거래유형 자동 매칭 ============
+const CATEGORY_TO_TX_TYPE = {
+  '01': 'sale',        // 매출 → 매출
+  '02': 'purchase',    // 매입 → 매입
+  '03': 'cost',        // 경비 → 경비
+  '04': 'salary',      // 급여 → 급여
+  '05': 'transfer',    // 금융 → 이체
+  '06': 'investment',  // 주식투자 → 투자
+  '07': 'tax',         // 세금 → 세금납부
+  '08': 'other'        // 기타 → 기타
+};
+
+// 매출/매입은 부가세 포함이 일반적, 경비/급여 등은 별도
+const VAT_DEFAULT_BY_CATEGORY = {
+  '01': true,   // 매출 (부가세 포함이 기본)
+  '02': true,   // 매입 (세금계산서)
+  '03': false,  // 경비 (영수증 - 부가세 별도)
+  '04': false,  // 급여 (부가세 없음)
+  '05': false,  // 금융 (부가세 없음)
+  '06': false,  // 주식투자 (부가세 없음)
+  '07': false,  // 세금 (부가세 없음)
+  '08': false   // 기타
+};
+
+window.onCategoryChange = () => {
+  const cat = document.getElementById('category').value;
+  if(!cat) return;
+
+  // 거래유형 자동 매칭 (사용자가 이미 선택했으면 덮어쓰지 않음)
+  const txTypeEl = document.getElementById('txType');
+  if(!txTypeEl.value && CATEGORY_TO_TX_TYPE[cat]){
+    txTypeEl.value = CATEGORY_TO_TX_TYPE[cat];
+  }
+
+  // 부가세 자동 설정
+  const vatChk = document.getElementById('vatIncluded');
+  if(cat in VAT_DEFAULT_BY_CATEGORY){
+    vatChk.checked = VAT_DEFAULT_BY_CATEGORY[cat];
+    updateVatBreakdown(getAmount());
+  }
+};
+
+window.onTxTypeChange = () => {
+  const tt = document.getElementById('txType').value;
+  if(!tt) return;
+  // 거래유형 변경 시에도 부가세 적절히 설정
+  if(tt === 'sale' || tt === 'purchase'){
+    document.getElementById('vatIncluded').checked = true;
+    updateVatBreakdown(getAmount());
+  } else if(tt === 'salary' || tt === 'tax' || tt === 'investment' || tt === 'transfer'){
+    document.getElementById('vatIncluded').checked = false;
+    updateVatBreakdown(getAmount());
+  }
+};
+
+// ============ 금액 입력 처리 ============
+window.onAmountInput = (input) => {
+  // 숫자만 추출
+  let raw = input.value.replace(/[^0-9]/g, '');
+  if(!raw){ input.value = ''; updateVatBreakdown(0); return; }
+  const num = parseInt(raw, 10);
+  input.value = num.toLocaleString('ko-KR');
+  updateVatBreakdown(num);
+};
+
+function getAmount(){
+  const raw = document.getElementById('amount').value.replace(/[^0-9]/g, '');
+  return raw ? parseInt(raw, 10) : 0;
+}
+
+function updateVatBreakdown(amount){
+  const vatChk = document.getElementById('vatIncluded').checked;
+  const box = document.getElementById('vatBreakdown');
+  if(!vatChk || !amount){
+    box.classList.remove('show');
+    return;
+  }
+  // 부가세 10% 분리 계산
+  const supply = Math.round(amount / 1.1);
+  const vat = amount - supply;
+  document.getElementById('supplyAmount').textContent = supply.toLocaleString('ko-KR') + '원';
+  document.getElementById('vatAmount').textContent = vat.toLocaleString('ko-KR') + '원';
+  document.getElementById('totalAmount').textContent = amount.toLocaleString('ko-KR') + '원';
+  box.classList.add('show');
+}
+
+document.getElementById('vatIncluded').addEventListener('change', () => {
+  updateVatBreakdown(getAmount());
+});
+
+// ============ 거래처 자동완성 ============
+window.onVendorInput = (input) => {
+  const val = input.value.trim().toLowerCase();
+  const list = document.getElementById('suggestList');
+  if(!val){ list.classList.remove('show'); return; }
+  const matched = vendorList.filter(v => v.name.toLowerCase().includes(val)).slice(0, 6);
+  if(matched.length === 0){ list.classList.remove('show'); return; }
+  list.innerHTML = matched.map(v =>
+    `<div class="suggest-item" onclick="pickVendor('${v.name.replace(/'/g, "\\'")}')">${escapeHtml(v.name)} <span style="color:#9ca3af;font-size:.78rem;">(${v.count}건)</span></div>`
+  ).join('');
+  list.classList.add('show');
+};
+
+window.pickVendor = (name) => {
+  document.getElementById('vendor').value = name;
+  hideSuggest();
+};
+
+window.hideSuggest = () => {
+  document.getElementById('suggestList').classList.remove('show');
+};
+
+function escapeHtml(s){
+  if(s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ============ 파일 첨부 ============
+window.onFileChange = (input) => {
+  selectedFiles = Array.from(input.files);
+  renderFileList();
+};
+
+function renderFileList(){
+  const list = document.getElementById('fileList');
+  if(selectedFiles.length === 0){ list.innerHTML = ''; return; }
+  list.innerHTML = selectedFiles.map((f, i) => `
+    <div class="file-item">
+      <span>📄</span>
+      <span class="name">${escapeHtml(f.name)}</span>
+      <span class="size">${formatSize(f.size)}</span>
+      <button class="remove" onclick="removeFile(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+window.removeFile = (idx) => {
+  selectedFiles.splice(idx, 1);
+  renderFileList();
+};
+
+function formatSize(bytes){
+  if(bytes < 1024) return bytes + 'B';
+  if(bytes < 1024*1024) return (bytes/1024).toFixed(1) + 'KB';
+  return (bytes/(1024*1024)).toFixed(1) + 'MB';
+}
+
+// ============ Drive API 호출 헬퍼 ============
+async function driveUpload(file, parentFolderId, fileName){
+  if(!driveToken) throw new Error('Drive 토큰이 없습니다.');
+
+  // 멀티파트 업로드
+  const metadata = {
+    name: fileName,
+    parents: [parentFolderId]
+  };
+  const boundary = '-------tax-' + Math.random().toString(36).substring(2);
+  const delimiter = '\r\n--' + boundary + '\r\n';
+  const closeDelim = '\r\n--' + boundary + '--';
+
+  const fileData = await new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(fr.result);
+    fr.onerror = () => rej(new Error('파일 읽기 실패'));
+    fr.readAsArrayBuffer(file);
+  });
+
+  // ArrayBuffer를 base64로 변환
+  const bytes = new Uint8Array(fileData);
+  let binary = '';
+  for(let i=0; i<bytes.byteLength; i++){
+    binary += String.fromCharCode(bytes[i]);
+  }
+  const base64Data = btoa(binary);
+
+  const body =
+    delimiter +
+    'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+    JSON.stringify(metadata) +
+    delimiter +
+    'Content-Type: ' + (file.type || 'application/octet-stream') + '\r\n' +
+    'Content-Transfer-Encoding: base64\r\n\r\n' +
+    base64Data +
+    closeDelim;
+
+  const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + driveToken,
+      'Content-Type': 'multipart/related; boundary=' + boundary
+    },
+    body: body
+  });
+
+  if(!r.ok){
+    const txt = await r.text();
+    throw new Error(`업로드 실패 (${r.status}): ${txt}`);
+  }
+  return r.json();
+}
+
+// 해당 법인/월/분류 하위 폴더 ID 조회
+async function getTargetFolderId(company, yearMonth, categoryIdx){
+  if(!driveToken) throw new Error('Drive 토큰이 없습니다.');
+  if(!companiesSettings || !companiesSettings[company]){
+    throw new Error('법인 폴더 설정이 없습니다: ' + company);
+  }
+  const compFolderId = companiesSettings[company].driveFolderId;
+
+  // 월별 폴더 검색
+  const monthFolder = await findFolder(yearMonth, compFolderId);
+  let monthFolderId;
+  if(monthFolder){
+    monthFolderId = monthFolder.id;
+  } else {
+    // 없으면 생성 (매달 1일 자동 생성 보완)
+    const created = await createFolder(yearMonth, compFolderId);
+    monthFolderId = created.id;
+  }
+
+  // 분류 하위 폴더 검색
+  const compSettings = companiesSettings[company];
+  const subFolder = (compSettings.subFolders || []).find(s => s.idx === categoryIdx);
+  if(!subFolder) throw new Error('해당 분류 폴더가 없습니다: ' + categoryIdx);
+
+  const catFolder = await findFolder(subFolder.name, monthFolderId);
+  let catFolderId;
+  if(catFolder){
+    catFolderId = catFolder.id;
+  } else {
+    const created = await createFolder(subFolder.name, monthFolderId);
+    catFolderId = created.id;
+  }
+  return catFolderId;
+}
+
+async function findFolder(name, parentId){
+  const q = `name='${name.replace(/'/g, "\\'")}' and mimeType='application/vnd.google-apps.folder' and trashed=false` +
+    (parentId ? ` and '${parentId}' in parents` : ` and 'root' in parents`);
+  const r = await fetch('https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent(q) + '&fields=files(id,name)', {
+    headers: { Authorization: 'Bearer ' + driveToken }
+  });
+  if(!r.ok) throw new Error('폴더 검색 실패: ' + r.status);
+  const d = await r.json();
+  return d.files && d.files.length > 0 ? d.files[0] : null;
+}
+
+async function createFolder(name, parentId){
+  const body = { name: name, mimeType: 'application/vnd.google-apps.folder' };
+  if(parentId) body.parents = [parentId];
+  const r = await fetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + driveToken,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+  if(!r.ok) throw new Error('폴더 생성 실패: ' + r.status);
+  return r.json();
+}
+
+// ============ 저장 ============
+window.doSave = async () => {
+  // 유효성 검사
+  const txDate = document.getElementById('txDate').value;
+  const category = document.getElementById('category').value;
+  const txType = document.getElementById('txType').value;
+  const amount = getAmount();
+
+  if(!txDate){ alert('거래일자를 입력해주세요'); return; }
+  if(!selectedCompany){ alert('법인을 선택해주세요'); return; }
+  if(!category){ alert('분류를 선택해주세요'); return; }
+  if(!txType){ alert('거래유형을 선택해주세요'); return; }
+  if(!amount || amount <= 0){ alert('금액을 입력해주세요'); return; }
+
+  const vatIncl = document.getElementById('vatIncluded').checked;
+  const vendor = document.getElementById('vendor').value.trim();
+  const summary = document.getElementById('summary').value.trim();
+  const payment = document.getElementById('payment').value;
+  const memo = document.getElementById('memo').value.trim();
+
+  // 부가세 분리 계산
+  let supplyAmount = amount;
+  let vatAmount = 0;
+  if(vatIncl){
+    supplyAmount = Math.round(amount / 1.1);
+    vatAmount = amount - supplyAmount;
+  }
+
+  // 진행 모달 표시
+  const overlay = document.getElementById('progressOverlay');
+  const content = document.getElementById('progressContent');
+  overlay.classList.add('show');
+  content.innerHTML = '';
+  document.getElementById('btnSave').disabled = true;
+
+  function addStep(text, status){
+    const div = document.createElement('div');
+    div.className = 'progress-item ' + (status||'doing');
+    let icon = '<div class="spinner"></div>';
+    if(status === 'done') icon = '✅';
+    if(status === 'error') icon = '❌';
+    div.innerHTML = icon + ' ' + text;
+    content.appendChild(div);
+    return div;
+  }
+
+  try{
+    // 1. Firebase에 거래 기본 정보 저장
+    const step1 = addStep('거래 정보 저장 중...', 'doing');
+    const txRef = push(ref(db, 'tax_helper/transactions'));
+    const txId = txRef.key;
+
+    // 거래일자에서 년월 추출
+    const dateParts = txDate.split('-');
+    const yearMonth = `${dateParts[0]}_${dateParts[1]}`;
+
+    const txData = {
+      id: txId,
+      date: txDate,
+      month: yearMonth,
+      company: selectedCompany,
+      category: category,
+      txType: txType,
+      amount: amount,
+      vatIncluded: vatIncl,
+      supplyAmount: supplyAmount,
+      vatAmount: vatAmount,
+      vendor: vendor || null,
+      summary: summary || null,
+      payment: payment,
+      memo: memo || null,
+      attachments: [],
+      createdAt: Date.now(),
+      createdBy: sess.email,
+      createdByName: sess.name || sess.email
+    };
+
+    await set(txRef, txData);
+    step1.className = 'progress-item done';
+    step1.innerHTML = '✅ 거래 정보 저장 완료';
+
+    // 2. 거래처 카운트 업데이트
+    if(vendor){
+      try{
+        const vKey = vendor.replace(/[\.\#\$\/\[\]]/g, '_');
+        const vRef = ref(db, 'tax_helper/vendors/' + vKey);
+        const vSnap = await get(vRef);
+        const prev = vSnap.exists() ? (vSnap.val().count || 0) : 0;
+        await set(vRef, { name: vendor, count: prev + 1, lastUsed: Date.now() });
+      }catch(e){ console.warn('거래처 카운트 실패:', e); }
+    }
+
+    // 3. 파일 업로드 (있는 경우만)
+    if(selectedFiles.length > 0){
+      if(!driveToken){
+        addStep('⚠️ Drive 토큰 없음 → 파일 업로드 건너뜀', 'error');
+        addStep('파일 첨부 없이 거래만 저장됨', 'done');
+      } else if(!companiesSettings){
+        addStep('⚠️ 폴더 설정 없음 → 파일 업로드 건너뜀', 'error');
+      } else {
+        const step2 = addStep('대상 폴더 확인 중...', 'doing');
+        const targetFolderId = await getTargetFolderId(selectedCompany, yearMonth, category);
+        step2.className = 'progress-item done';
+        step2.innerHTML = '✅ 대상 폴더 확인 완료';
+
+        const uploaded = [];
+        for(let i=0; i<selectedFiles.length; i++){
+          const f = selectedFiles[i];
+          const upStep = addStep(`파일 업로드 중 (${i+1}/${selectedFiles.length}): ${f.name}`, 'doing');
+          try{
+            // 파일명에 거래처/일자 prefix 추가 (구분 쉽게)
+            const prefix = [vendor || '', txDate.replace(/-/g, '')].filter(Boolean).join('_');
+            const safeName = prefix ? `${prefix}_${f.name}` : f.name;
+            const result = await driveUpload(f, targetFolderId, safeName);
+            uploaded.push({
+              driveFileId: result.id,
+              name: result.name,
+              size: f.size,
+              type: f.type,
+              uploadedAt: Date.now()
+            });
+            upStep.className = 'progress-item done';
+            upStep.innerHTML = `✅ 업로드 완료: ${escapeHtml(f.name)}`;
+          }catch(e){
+            console.error('업로드 실패:', e);
+            upStep.className = 'progress-item error';
+            upStep.innerHTML = `❌ 업로드 실패: ${escapeHtml(f.name)} (${escapeHtml(e.message)})`;
+          }
+        }
+
+        if(uploaded.length > 0){
+          await update(ref(db, 'tax_helper/transactions/' + txId), {
+            attachments: uploaded,
+            attachmentCount: uploaded.length
+          });
+        }
+      }
+    }
+
+    // 4. 감사 로그
+    try{
+      const auditRef = push(ref(db, 'tax_helper/audit'));
+      await set(auditRef, {
+        action: 'tx_create',
+        user: sess.email,
+        target: txId,
+        details: `${selectedCompany}/${category}/${amount.toLocaleString()}원`,
+        timestamp: Date.now()
+      });
+    }catch(e){ console.warn('감사 로그 실패:', e); }
+
+    addStep('🎉 거래 추가 완료!', 'done');
+
+    // 잠시 후 폼 초기화 또는 메인 이동
+    setTimeout(() => {
+      overlay.classList.remove('show');
+      const goNext = confirm('✅ 거래 추가 완료!\n\n[확인] 새 거래 추가\n[취소] 메인으로 이동');
+      if(goNext){
+        // 폼 초기화
+        location.reload();
+      } else {
+        location.href = 'main.html';
+      }
+    }, 800);
+
+  }catch(e){
+    console.error('저장 실패:', e);
+    addStep('❌ 저장 실패: ' + e.message, 'error');
+    document.getElementById('btnSave').disabled = false;
+    setTimeout(() => {
+      alert('저장 중 오류 발생:\n' + e.message);
+      overlay.classList.remove('show');
+    }, 1000);
+  }
+};
+
+// ============ 시작 ============
+onAuthStateChanged(auth, async user => {
+  if(!user){
+    alert('Firebase 세션이 만료되었습니다. 다시 로그인해주세요.');
+    location.replace('index.html');
+    return;
+  }
+  await loadDriveState();
+  await loadVendors();
+});
+
+// Service Worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js?v=20260524-v5')
+    .then(reg => console.log('[SW] 등록 완료'))
+    .catch(err => console.log('[SW] 등록 실패:', err));
+}
+</script>
+
+</body>
+</html>
