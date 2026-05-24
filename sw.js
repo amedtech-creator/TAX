@@ -1,5 +1,5 @@
 // 세무자료 도우미 Service Worker
-const CACHE = 'tax-v20260524-v1';
+const CACHE = 'tax-v20260524-v2';
 const CORE = [
   './',
   './index.html',

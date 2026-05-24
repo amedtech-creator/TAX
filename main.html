@@ -10,30 +10,70 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#16a34a">
   <style>
-    :root{--green:#16a34a;--green-dark:#15803d;--red:#ef4444;--gray:#6b7280;--border:#e5e7eb;}
+    :root{
+      --green:#16a34a;--green-dark:#15803d;--green-light:#dcfce7;
+      --red:#ef4444;--orange:#f59e0b;--blue:#3b82f6;--purple:#8b5cf6;
+      --gray:#6b7280;--gray-light:#f3f4f6;--border:#e5e7eb;
+    }
     *{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;background:#f9fafb;min-height:100vh;}
-    .header{background:#fff;border-bottom:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;}
+    body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;background:#f9fafb;min-height:100vh;color:#111;}
+
+    .header{background:#fff;border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
     .header-left{display:flex;align-items:center;gap:12px;}
     .logo-icon{width:36px;height:36px;background:var(--green);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;}
-    .header-title{font-size:1rem;font-weight:800;color:#111;}
+    .header-title{font-size:1rem;font-weight:800;}
     .header-sub{font-size:.7rem;color:var(--gray);}
     .user-badge{display:flex;align-items:center;gap:8px;font-size:.85rem;}
     .role-tag{padding:3px 8px;border-radius:6px;font-size:.7rem;font-weight:700;}
     .role-super{background:#dcfce7;color:var(--green-dark);}
     .role-admin{background:#dbeafe;color:#1e40af;}
-    .logout-btn{padding:6px 12px;background:#f3f4f6;border:none;border-radius:6px;font-size:.8rem;font-weight:600;cursor:pointer;}
-    .logout-btn:hover{background:#e5e7eb;}
-    .container{max-width:800px;margin:0 auto;padding:24px 20px;}
-    .welcome-card{background:#fff;border-radius:16px;padding:32px 28px;box-shadow:0 2px 8px rgba(0,0,0,.04);}
-    .welcome-title{font-size:1.4rem;font-weight:800;color:#111;margin-bottom:8px;}
-    .welcome-sub{font-size:.95rem;color:var(--gray);line-height:1.6;margin-bottom:24px;}
-    .info-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px;font-size:.85rem;color:var(--green-dark);line-height:1.7;}
-    .info-box strong{display:block;margin-bottom:6px;font-size:.95rem;}
-    .coming-soon{margin-top:24px;padding:20px;background:#fef3c7;border:1px solid #fde68a;border-radius:10px;text-align:center;}
-    .coming-soon-icon{font-size:2rem;margin-bottom:8px;}
-    .coming-soon-title{font-weight:700;color:#92400e;margin-bottom:4px;}
-    .coming-soon-text{font-size:.85rem;color:#78350f;line-height:1.6;}
+    .logout-btn{padding:6px 12px;background:var(--gray-light);border:none;border-radius:6px;font-size:.8rem;font-weight:600;cursor:pointer;}
+    .logout-btn:hover{background:var(--border);}
+
+    .container{max-width:900px;margin:0 auto;padding:20px;}
+
+    .status-bar{background:#fff;border-radius:14px;padding:16px 20px;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:20px;display:flex;flex-wrap:wrap;gap:20px;align-items:center;}
+    .status-item{display:flex;align-items:center;gap:8px;font-size:.85rem;}
+    .status-icon{font-size:1rem;}
+    .status-label{color:var(--gray);}
+    .status-value{font-weight:700;color:#111;}
+    .status-value.warn{color:var(--orange);}
+    .status-value.danger{color:var(--red);}
+    .status-value.ok{color:var(--green-dark);}
+
+    .menu-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+    @media(min-width:768px){.menu-grid{grid-template-columns:repeat(3,1fr);}}
+
+    .menu-card{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:20px;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;gap:8px;position:relative;text-decoration:none;color:inherit;}
+    .menu-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.08);border-color:var(--green);}
+    .menu-card.disabled{opacity:.55;cursor:not-allowed;}
+    .menu-card.disabled:hover{transform:none;box-shadow:none;border-color:var(--border);}
+
+    .menu-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;}
+    .icon-green{background:var(--green-light);}
+    .icon-blue{background:#dbeafe;}
+    .icon-purple{background:#ede9fe;}
+    .icon-orange{background:#fed7aa;}
+    .icon-pink{background:#fce7f3;}
+    .icon-gray{background:var(--gray-light);}
+
+    .menu-title{font-size:1rem;font-weight:800;color:#111;}
+    .menu-desc{font-size:.78rem;color:var(--gray);line-height:1.4;}
+
+    .menu-badge{position:absolute;top:14px;right:14px;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:6px;}
+    .badge-coming{background:#fef3c7;color:#92400e;}
+    .badge-new{background:#fee2e2;color:#991b1b;}
+    .badge-ok{background:var(--green-light);color:var(--green-dark);}
+    .badge-warn{background:#fed7aa;color:#9a3412;}
+
+    .section-title{font-size:.8rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin:24px 4px 12px;}
+
+    .info-banner{background:linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%);border:1px solid #bbf7d0;border-radius:12px;padding:16px 20px;margin-bottom:20px;font-size:.85rem;color:var(--green-dark);line-height:1.6;display:flex;gap:12px;align-items:flex-start;}
+    .info-banner-icon{font-size:1.2rem;flex-shrink:0;}
+    .info-banner strong{display:block;margin-bottom:4px;font-size:.92rem;}
+    .info-banner code{background:rgba(0,0,0,.06);padding:1px 5px;border-radius:4px;font-size:.85em;}
+    .info-banner-close{margin-left:auto;background:none;border:none;color:var(--green-dark);cursor:pointer;font-size:1.1rem;opacity:.6;}
+    .info-banner-close:hover{opacity:1;}
   </style>
 </head>
 <body>
@@ -54,36 +94,116 @@
 </div>
 
 <div class="container">
-  <div class="welcome-card">
-    <div class="welcome-title">👋 환영합니다, <span id="welcomeName">관리자</span>님!</div>
-    <div class="welcome-sub">
-      세무사 전달용 자료를 효율적으로 정리하고 관리하는 시스템입니다.<br>
-      기존 AMT 시스템과 완전히 분리되어 안전하게 운영됩니다.
-    </div>
 
-    <div class="info-box">
-      <strong>✅ 1단계 완료 — 로그인 시스템</strong>
-      Firebase Auth + 코드 검증이 정상 작동합니다.<br>
-      이메일 + 코드로 안전하게 로그인했습니다.
+  <!-- 상태 표시줄 -->
+  <div class="status-bar">
+    <div class="status-item">
+      <span class="status-icon">📅</span>
+      <span class="status-label">이번 달:</span>
+      <span class="status-value" id="currentMonth">-</span>
     </div>
-
-    <div class="coming-soon">
-      <div class="coming-soon-icon">🚧</div>
-      <div class="coming-soon-title">개발 중인 기능들</div>
-      <div class="coming-soon-text">
-        • 거래내역 입력 폼<br>
-        • Google Drive 연동 (영수증/세금계산서 업로드)<br>
-        • 월별 폴더 자동 생성 (AMT/KY/BEST)<br>
-        • 세무사 전달 ZIP 패키지 생성<br>
-        • 폴더 관리 (수정/추가/삭제 + OTP)
-      </div>
+    <div class="status-item">
+      <span class="status-icon">☁️</span>
+      <span class="status-label">Drive:</span>
+      <span class="status-value" id="driveStatus">확인 중...</span>
+    </div>
+    <div class="status-item">
+      <span class="status-icon">💼</span>
+      <span class="status-label">법인:</span>
+      <span class="status-value">AMT · KY · BEST</span>
     </div>
   </div>
+
+  <!-- 환영 배너 (Drive 미연결 시) -->
+  <div class="info-banner" id="welcomeBanner" style="display:none;">
+    <span class="info-banner-icon">🎯</span>
+    <div style="flex:1">
+      <strong>시작하려면 Google Drive를 먼저 연결하세요</strong>
+      세무자료는 새 계정 <code>amtkorea@gmail.com</code>의 Drive에 안전하게 저장됩니다. "Drive 연결" 카드를 클릭해서 시작하세요.
+    </div>
+    <button class="info-banner-close" onclick="hideBanner()">✕</button>
+  </div>
+
+  <!-- 주요 기능 -->
+  <div class="section-title">📌 주요 기능</div>
+  <div class="menu-grid">
+
+    <div class="menu-card disabled" data-menu="dashboard">
+      <div class="menu-icon icon-green">📊</div>
+      <div class="menu-title">대시보드</div>
+      <div class="menu-desc">이번 달 매출/매입/경비 요약</div>
+      <span class="menu-badge badge-coming">준비중</span>
+    </div>
+
+    <div class="menu-card disabled" data-menu="add-transaction">
+      <div class="menu-icon icon-blue">➕</div>
+      <div class="menu-title">거래 입력</div>
+      <div class="menu-desc">새 거래내역 추가, 증빙 첨부</div>
+      <span class="menu-badge badge-coming">3차 작업</span>
+    </div>
+
+    <div class="menu-card disabled" data-menu="transactions">
+      <div class="menu-icon icon-purple">📋</div>
+      <div class="menu-title">거래내역</div>
+      <div class="menu-desc">전체 거래 보기/검색/수정</div>
+      <span class="menu-badge badge-coming">3차 작업</span>
+    </div>
+
+  </div>
+
+  <!-- 관리 기능 -->
+  <div class="section-title">⚙️ 관리</div>
+  <div class="menu-grid">
+
+    <div class="menu-card" data-menu="drive">
+      <div class="menu-icon icon-orange">☁️</div>
+      <div class="menu-title">Drive 연결</div>
+      <div class="menu-desc">Google Drive 계정 연결 및 폴더 관리</div>
+      <span class="menu-badge badge-warn" id="driveCardBadge">미연결</span>
+    </div>
+
+    <div class="menu-card disabled" data-menu="folders">
+      <div class="menu-icon icon-pink">📁</div>
+      <div class="menu-title">폴더 관리</div>
+      <div class="menu-desc">폴더 수정/추가/삭제 (총괄 OTP)</div>
+      <span class="menu-badge badge-coming">Drive 연결 후</span>
+    </div>
+
+    <div class="menu-card disabled" data-menu="settings">
+      <div class="menu-icon icon-gray">⚙️</div>
+      <div class="menu-title">설정</div>
+      <div class="menu-desc">계정/알림/텔레그램 설정</div>
+      <span class="menu-badge badge-coming">준비중</span>
+    </div>
+
+  </div>
+
+  <!-- 세무사 전달 (고급 기능) -->
+  <div class="section-title">📤 세무사 전달</div>
+  <div class="menu-grid">
+
+    <div class="menu-card disabled" data-menu="export">
+      <div class="menu-icon icon-green">📦</div>
+      <div class="menu-title">월별 자료 생성</div>
+      <div class="menu-desc">ZIP 패키지 + 엑셀 요약 자동 생성</div>
+      <span class="menu-badge badge-coming">마지막 단계</span>
+    </div>
+
+    <div class="menu-card disabled" data-menu="sync-amt">
+      <div class="menu-icon icon-blue">🔄</div>
+      <div class="menu-title">AMT 자동 동기화</div>
+      <div class="menu-desc">기존 AMT 시스템 데이터 자동 가져오기</div>
+      <span class="menu-badge badge-coming">준비중</span>
+    </div>
+
+  </div>
+
 </div>
 
 <script type="module">
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const FB_CFG = {
   apiKey: "AIzaSyD6kmefRjjORwWBIyDl1n105bGG7rJf8iQ",
@@ -95,12 +215,14 @@ const FB_CFG = {
   appId: "1:759927124180:web:20b471702af9ee32354b41"
 };
 
-const SESSION_KEY = 'tax_auth_session';
-const SAVED_CODE  = 'tax_saved_code';
-const AUTOLOGIN_KEY = 'tax_autologin_ok';
+const SESSION_KEY    = 'tax_auth_session';
+const SAVED_CODE     = 'tax_saved_code';
+const AUTOLOGIN_KEY  = 'tax_autologin_ok';
+const BANNER_HIDDEN  = 'tax_banner_hidden';
 
-const app = getApps().find(a=>a.name==='amt-tax-app') || initializeApp(FB_CFG, 'amt-tax-app');
+const app  = getApps().find(a=>a.name==='amt-tax-app') || initializeApp(FB_CFG, 'amt-tax-app');
 const auth = getAuth(app);
+const db   = getDatabase(app);
 
 // 세션 확인
 function getSession(){
@@ -113,12 +235,12 @@ function getSession(){
 
 const sess = getSession();
 if(!sess){
-  alert('로그인이 필요합니다');
   location.replace('index.html');
-} else {
-  // 사용자 정보 표시
+}
+
+// 사용자 정보 표시
+function renderUser(){
   document.getElementById('userName').textContent = sess.name || sess.email;
-  document.getElementById('welcomeName').textContent = sess.name || '관리자';
   const roleEl = document.getElementById('userRole');
   if(sess.role === 'super'){
     roleEl.textContent = '총괄';
@@ -128,6 +250,72 @@ if(!sess){
     roleEl.className = 'role-tag role-admin';
   }
 }
+
+// 현재 년/월 표시
+function renderCurrentMonth(){
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth()+1).padStart(2,'0');
+  document.getElementById('currentMonth').textContent = `${y}년 ${m}월`;
+}
+
+// Drive 연결 상태 확인
+async function checkDriveStatus(){
+  try{
+    const snap = await get(ref(db, 'tax_helper/driveAuth/status'));
+    const connected = snap.exists() && snap.val()?.connected === true;
+    const statusEl = document.getElementById('driveStatus');
+    const badgeEl  = document.getElementById('driveCardBadge');
+    const banner   = document.getElementById('welcomeBanner');
+
+    if(connected){
+      statusEl.textContent = '✅ 연결됨';
+      statusEl.className = 'status-value ok';
+      badgeEl.textContent = '연결됨';
+      badgeEl.className = 'menu-badge badge-ok';
+    } else {
+      statusEl.textContent = '❌ 미연결';
+      statusEl.className = 'status-value danger';
+      badgeEl.textContent = '미연결';
+      badgeEl.className = 'menu-badge badge-warn';
+
+      // 배너 표시 (숨기지 않았을 때만)
+      if(localStorage.getItem(BANNER_HIDDEN) !== '1'){
+        banner.style.display = 'flex';
+      }
+    }
+  }catch(e){
+    console.warn('[Drive 상태 확인 실패]', e);
+    document.getElementById('driveStatus').textContent = '⚠️ 확인 실패';
+  }
+}
+
+// 메뉴 클릭 이벤트
+function bindMenuClicks(){
+  document.querySelectorAll('.menu-card').forEach(card => {
+    const menu = card.dataset.menu;
+    if(card.classList.contains('disabled')){
+      card.addEventListener('click', () => {
+        alert('🚧 이 기능은 아직 개발 중입니다.\n곧 추가될 예정이에요.');
+      });
+    } else {
+      card.addEventListener('click', () => {
+        if(menu === 'drive'){
+          // 일단 alert만, 다음 단계에서 drive.html로 이동 예정
+          alert('☁️ Google Drive 연결 화면\n\n다음 단계(2-C)에서 만들어집니다.\nGoogle Cloud Console 설정 후 이용 가능해요.');
+        } else {
+          alert('🚧 준비 중인 기능입니다.');
+        }
+      });
+    }
+  });
+}
+
+// 배너 닫기
+window.hideBanner = () => {
+  document.getElementById('welcomeBanner').style.display = 'none';
+  localStorage.setItem(BANNER_HIDDEN, '1');
+};
 
 // 로그아웃
 window.doLogout = async () => {
@@ -141,9 +329,26 @@ window.doLogout = async () => {
   location.replace('index.html');
 };
 
+// 초기화
+if(sess){
+  renderUser();
+  renderCurrentMonth();
+  bindMenuClicks();
+
+  onAuthStateChanged(auth, user => {
+    if(!user){
+      console.warn('Firebase Auth 세션 없음, 재로그인 필요');
+      document.getElementById('driveStatus').textContent = '⚠️ 인증 만료';
+      document.getElementById('driveStatus').className = 'status-value warn';
+    } else {
+      checkDriveStatus();
+    }
+  });
+}
+
 // Service Worker 등록
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js?v=20260524-v1')
+  navigator.serviceWorker.register('sw.js?v=20260524-v2')
     .then(reg => console.log('[SW] 등록 완료'))
     .catch(err => console.log('[SW] 등록 실패:', err));
 }
