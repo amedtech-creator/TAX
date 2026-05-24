@@ -301,8 +301,7 @@ function bindMenuClicks(){
     } else {
       card.addEventListener('click', () => {
         if(menu === 'drive'){
-          // 일단 alert만, 다음 단계에서 drive.html로 이동 예정
-          alert('☁️ Google Drive 연결 화면\n\n다음 단계(2-C)에서 만들어집니다.\nGoogle Cloud Console 설정 후 이용 가능해요.');
+          location.href = 'drive.html';
         } else {
           alert('🚧 준비 중인 기능입니다.');
         }
@@ -348,7 +347,7 @@ if(sess){
 
 // Service Worker 등록
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js?v=20260524-v2')
+  navigator.serviceWorker.register('sw.js?v=20260524-v3')
     .then(reg => console.log('[SW] 등록 완료'))
     .catch(err => console.log('[SW] 등록 실패:', err));
 }

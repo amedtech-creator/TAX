@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Drive 연결 - 세무자료 도우미</title>
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#16a34a">
+
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <style>
+    :root{
+      --green:#16a34a;--green-dark:#15803d;--green-light:#dcfce7;
+      --red:#ef4444;--orange:#f59e0b;--blue:#3b82f6;
+      --gray:#6b7280;--gray-light:#f3f4f6;--border:#e5e7eb;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;background:#f9fafb;min-height:100vh;color:#111;}
+
+    .header{background:#fff;border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
+    .header-left{display:flex;align-items:center;gap:12px;}
+    .logo-icon{width:36px;height:36px;background:var(--green);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;}
+    .header-title{font-size:1rem;font-weight:800;}
+    .header-sub{font-size:.7rem;color:var(--gray);}
+    .back-btn{padding:6px 12px;background:var(--gray-light);border:none;border-radius:6px;font-size:.8rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;}
+    .back-btn:hover{background:var(--border);}
+
+    .container{max-width:800px;margin:0 auto;padding:24px 20px;}
+
+    .page-title{font-size:1.4rem;font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:10px;}
+    .page-sub{font-size:.9rem;color:var(--gray);margin-bottom:24px;line-height:1.6;}
+
+    .card{background:#fff;border-radius:14px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:16px;}
+    .card-title{font-size:1rem;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+
+    .status-box{padding:16px;border-radius:10px;margin-bottom:16px;display:flex;align-items:flex-start;gap:12px;}
+    .status-box.danger{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;}
+    .status-box.success{background:var(--green-light);border:1px solid #bbf7d0;color:var(--green-dark);}
+    .status-box.warn{background:#fef3c7;border:1px solid #fde68a;color:#92400e;}
+    .status-box.info{background:#dbeafe;border:1px solid #bfdbfe;color:#1e40af;}
+    .status-icon{font-size:1.4rem;flex-shrink:0;}
+    .status-text strong{display:block;margin-bottom:4px;font-size:.95rem;}
+    .status-text{font-size:.85rem;line-height:1.6;}
+
+    .btn{padding:12px 20px;border:none;border-radius:10px;font-size:.95rem;font-weight:700;cursor:pointer;transition:opacity .2s;display:inline-flex;align-items:center;gap:8px;}
+    .btn-primary{background:var(--green);color:#fff;}
+    .btn-primary:hover{opacity:.9;}
+    .btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+    .btn-secondary{background:var(--gray-light);color:#374151;}
+    .btn-secondary:hover{background:var(--border);}
+    .btn-danger{background:var(--red);color:#fff;}
+    .btn-danger:hover{opacity:.9;}
+    .btn-block{display:flex;width:100%;justify-content:center;}
+
+    .info-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--gray-light);font-size:.88rem;}
+    .info-row:last-child{border-bottom:none;}
+    .info-label{color:var(--gray);}
+    .info-value{font-weight:600;}
+    .info-value.mono{font-family:monospace;font-size:.8rem;background:var(--gray-light);padding:2px 8px;border-radius:4px;}
+
+    .folder-tree{font-family:monospace;font-size:.85rem;background:var(--gray-light);padding:14px;border-radius:8px;line-height:1.8;color:#374151;white-space:pre-wrap;overflow-x:auto;}
+
+    .progress-list{margin-top:14px;}
+    .progress-item{padding:8px 0;font-size:.85rem;display:flex;align-items:center;gap:8px;}
+    .progress-item.done{color:var(--green-dark);}
+    .progress-item.doing{color:var(--blue);}
+    .progress-item.error{color:var(--red);}
+    .progress-item.pending{color:var(--gray);}
+
+    .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--blue);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    .hidden{display:none !important;}
+
+    .small-text{font-size:.75rem;color:var(--gray);margin-top:6px;line-height:1.5;}
+
+    .action-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
+    @media(max-width:600px){.action-row{flex-direction:column;}}
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <button class="back-btn" onclick="goBack()">← 메인</button>
+    <div class="logo-icon">☁️</div>
+    <div>
+      <div class="header-title">Drive 연결</div>
+      <div class="header-sub">Google Drive 계정 및 폴더 관리</div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="page-title">☁️ Google Drive 연결</div>
+  <div class="page-sub">
+    세무자료는 별도의 Google Drive 계정(<code>amtkorea@gmail.com</code>)에 안전하게 저장됩니다.<br>
+    아래 "Drive 연결" 버튼을 눌러 Google 계정으로 로그인하세요.
+  </div>
+
+  <!-- 연결 상태 카드 -->
+  <div class="card">
+    <div class="card-title">📡 연결 상태</div>
+
+    <!-- 미연결 상태 -->
+    <div id="statusDisconnected" class="status-box danger">
+      <div class="status-icon">❌</div>
+      <div class="status-text">
+        <strong>아직 Google Drive에 연결되지 않았습니다</strong>
+        세무자료를 저장하려면 먼저 연결이 필요합니다. 아래 버튼을 클릭해 시작하세요.
+      </div>
+    </div>
+
+    <!-- 연결됨 상태 -->
+    <div id="statusConnected" class="status-box success hidden">
+      <div class="status-icon">✅</div>
+      <div class="status-text">
+        <strong>Google Drive 연결됨</strong>
+        <div id="connectedInfo"></div>
+      </div>
+    </div>
+
+    <!-- 로딩 -->
+    <div id="statusLoading" class="status-box info">
+      <div class="status-icon"><div class="spinner"></div></div>
+      <div class="status-text">
+        <strong>연결 상태 확인 중...</strong>
+        잠시만 기다려주세요.
+      </div>
+    </div>
+
+    <!-- 연결 정보 (연결된 경우) -->
+    <div id="connectionDetails" class="hidden">
+      <div class="info-row">
+        <span class="info-label">연결된 계정</span>
+        <span class="info-value" id="driveEmail">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">연결 일시</span>
+        <span class="info-value" id="connectedAt">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">메인 폴더</span>
+        <span class="info-value" id="mainFolderName">-</span>
+      </div>
+    </div>
+
+    <!-- 버튼 영역 -->
+    <div class="action-row">
+      <button class="btn btn-primary" id="btnConnect" onclick="doConnect()">
+        🔗 Drive 연결하기
+      </button>
+      <button class="btn btn-secondary hidden" id="btnReconnect" onclick="doConnect()">
+        🔄 재연결
+      </button>
+      <button class="btn btn-danger hidden" id="btnDisconnect" onclick="doDisconnect()">
+        ❌ 연결 해제
+      </button>
+    </div>
+
+    <div class="small-text" id="connectHint">
+      💡 새 Google 계정 <code>amtkorea@gmail.com</code>으로 로그인하세요.<br>
+      해당 계정에 "세무자료" 폴더가 자동으로 생성됩니다.
+    </div>
+  </div>
+
+  <!-- 폴더 자동 생성 카드 (연결 후 표시) -->
+  <div class="card hidden" id="folderSetupCard">
+    <div class="card-title">📁 폴더 자동 생성</div>
+
+    <div class="status-box info">
+      <div class="status-icon">ℹ️</div>
+      <div class="status-text">
+        <strong>법인별 폴더 구조를 자동으로 만듭니다</strong>
+        Google Drive에 다음과 같은 구조로 폴더가 생성됩니다.
+      </div>
+    </div>
+
+    <div class="folder-tree">📁 세무자료
+├── 📁 AMT (에이엠티코리아)
+│   └── 📁 2026_05 (이번 달)
+│       ├── 📁 01_매출
+│       ├── 📁 02_매입
+│       ├── 📁 03_경비
+│       ├── 📁 04_급여
+│       ├── 📁 05_금융
+│       ├── 📁 06_주식투자
+│       ├── 📁 07_세금
+│       └── 📁 08_기타
+├── 📁 KY (케이와이메디칼)
+│   └── 📁 2026_05
+│       └── (동일한 8개 하위 폴더)
+└── 📁 BEST
+    └── 📁 2026_05
+        ├── 📁 01_매출
+        ├── 📁 02_매입
+        ├── 📁 03_경비
+        └── 📁 08_기타</div>
+
+    <div class="progress-list hidden" id="progressList"></div>
+
+    <div class="action-row">
+      <button class="btn btn-primary" id="btnCreateFolders" onclick="doCreateFolders()">
+        📁 폴더 자동 생성 시작
+      </button>
+      <button class="btn btn-secondary hidden" id="btnRefreshFolders" onclick="doRefreshFolders()">
+        🔄 폴더 상태 확인
+      </button>
+    </div>
+
+    <div class="small-text">
+      ⚠️ 이미 같은 이름의 폴더가 있으면 새로 만들지 않고 기존 폴더를 사용합니다.<br>
+      매달 1일 다음 달 폴더가 자동으로 생성됩니다.
+    </div>
+  </div>
+
+  <!-- 현재 폴더 상태 (자세히 보기) -->
+  <div class="card hidden" id="folderStatusCard">
+    <div class="card-title">📊 현재 폴더 상태</div>
+    <div id="folderStatusContent" class="small-text">
+      불러오는 중...
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getDatabase, ref, get, set, update, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+// ============ Firebase 설정 ============
+const FB_CFG = {
+  apiKey: "AIzaSyD6kmefRjjORwWBIyDl1n105bGG7rJf8iQ",
+  authDomain: "amt-tax.firebaseapp.com",
+  databaseURL: "https://amt-tax-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "amt-tax",
+  storageBucket: "amt-tax.firebasestorage.app",
+  messagingSenderId: "759927124180",
+  appId: "1:759927124180:web:20b471702af9ee32354b41"
+};
+
+// ============ Google OAuth 설정 ============
+const GOOGLE_CLIENT_ID = "759927124180-ctiktiboej4ncckilvq2kta5r932sge7.apps.googleusercontent.com";
+const GOOGLE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+const ROOT_FOLDER_NAME = "세무자료";
+
+// ============ 법인별 폴더 구조 ============
+const COMPANIES = {
+  AMT: {
+    name: "AMT",
+    fullName: "에이엠티코리아",
+    subFolders: [
+      { idx: "01", name: "01_매출" },
+      { idx: "02", name: "02_매입" },
+      { idx: "03", name: "03_경비" },
+      { idx: "04", name: "04_급여" },
+      { idx: "05", name: "05_금융" },
+      { idx: "06", name: "06_주식투자" },
+      { idx: "07", name: "07_세금" },
+      { idx: "08", name: "08_기타" }
+    ]
+  },
+  KY: {
+    name: "KY",
+    fullName: "케이와이메디칼",
+    subFolders: [
+      { idx: "01", name: "01_매출" },
+      { idx: "02", name: "02_매입" },
+      { idx: "03", name: "03_경비" },
+      { idx: "04", name: "04_급여" },
+      { idx: "05", name: "05_금융" },
+      { idx: "06", name: "06_주식투자" },
+      { idx: "07", name: "07_세금" },
+      { idx: "08", name: "08_기타" }
+    ]
+  },
+  BEST: {
+    name: "BEST",
+    fullName: "BEST (반품 처리 전용)",
+    subFolders: [
+      { idx: "01", name: "01_매출" },
+      { idx: "02", name: "02_매입" },
+      { idx: "03", name: "03_경비" },
+      { idx: "08", name: "08_기타" }
+    ]
+  }
+};
+
+const SESSION_KEY = 'tax_auth_session';
+const DRIVE_TOKEN_KEY = 'tax_drive_token'; // sessionStorage (토큰은 보안상 세션에만)
+
+// ============ 초기화 ============
+const app = getApps().find(a=>a.name==='amt-tax-app') || initializeApp(FB_CFG, 'amt-tax-app');
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+let currentSession = null;
+let tokenClient = null;
+let driveAccessToken = null;
+let driveStatus = null; // 'connected' | 'disconnected'
+
+// ============ 세션 확인 ============
+function getSession(){
+  try{
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if(!raw) return null;
+    return JSON.parse(raw);
+  }catch(e){ return null; }
+}
+
+currentSession = getSession();
+if(!currentSession){
+  location.replace('index.html');
+}
+
+// ============ 메인으로 돌아가기 ============
+window.goBack = () => {
+  location.href = 'main.html';
+};
+
+// ============ Drive 토큰 복구 (페이지 새로고침 시) ============
+function restoreToken(){
+  try{
+    const raw = sessionStorage.getItem(DRIVE_TOKEN_KEY);
+    if(!raw) return null;
+    const data = JSON.parse(raw);
+    // 토큰 만료 확인 (1시간)
+    if(data.expiresAt && Date.now() > data.expiresAt) return null;
+    return data;
+  }catch(e){ return null; }
+}
+
+// ============ 상태 UI 업데이트 ============
+function showStatus(state){
+  document.getElementById('statusLoading').classList.add('hidden');
+  document.getElementById('statusDisconnected').classList.add('hidden');
+  document.getElementById('statusConnected').classList.add('hidden');
+  document.getElementById('connectionDetails').classList.add('hidden');
+  document.getElementById('btnConnect').classList.add('hidden');
+  document.getElementById('btnReconnect').classList.add('hidden');
+  document.getElementById('btnDisconnect').classList.add('hidden');
+  document.getElementById('folderSetupCard').classList.add('hidden');
+  document.getElementById('folderStatusCard').classList.add('hidden');
+
+  if(state === 'loading'){
+    document.getElementById('statusLoading').classList.remove('hidden');
+  } else if(state === 'disconnected'){
+    document.getElementById('statusDisconnected').classList.remove('hidden');
+    document.getElementById('btnConnect').classList.remove('hidden');
+  } else if(state === 'connected'){
+    document.getElementById('statusConnected').classList.remove('hidden');
+    document.getElementById('connectionDetails').classList.remove('hidden');
+    document.getElementById('btnReconnect').classList.remove('hidden');
+    document.getElementById('btnDisconnect').classList.remove('hidden');
+    document.getElementById('folderSetupCard').classList.remove('hidden');
+    document.getElementById('connectHint').classList.add('hidden');
+  }
+}
+
+// ============ Drive 연결 상태 조회 ============
+async function checkDriveStatus(){
+  showStatus('loading');
+  try{
+    const snap = await get(ref(db, 'tax_helper/driveAuth/status'));
+    if(!snap.exists()){
+      driveStatus = 'disconnected';
+      showStatus('disconnected');
+      return;
+    }
+    const data = snap.val();
+    if(data.connected === true){
+      driveStatus = 'connected';
+      // 화면에 정보 표시
+      document.getElementById('driveEmail').textContent = data.email || '-';
+      document.getElementById('connectedAt').textContent = data.connectedAt ? new Date(data.connectedAt).toLocaleString('ko-KR') : '-';
+      document.getElementById('mainFolderName').textContent = data.rootFolderName || ROOT_FOLDER_NAME;
+      const info = document.getElementById('connectedInfo');
+      info.textContent = data.email ? `계정: ${data.email}` : '';
+      showStatus('connected');
+
+      // 토큰이 sessionStorage에 있는지 확인
+      const tk = restoreToken();
+      if(tk){
+        driveAccessToken = tk.token;
+      } else {
+        // 토큰이 없으면 다시 받아야 함을 알림
+        document.getElementById('connectHint').classList.remove('hidden');
+        document.getElementById('connectHint').innerHTML = '⚠️ Drive 접근 토큰이 만료되었습니다. 폴더 작업을 하려면 "재연결"을 눌러주세요.';
+      }
+    } else {
+      driveStatus = 'disconnected';
+      showStatus('disconnected');
+    }
+  }catch(e){
+    console.error('[Drive 상태 확인 실패]', e);
+    showStatus('disconnected');
+  }
+}
+
+// ============ Google OAuth 토큰 클라이언트 초기화 ============
+function initTokenClient(){
+  if(!window.google || !window.google.accounts || !window.google.accounts.oauth2){
+    console.warn('Google Identity Services 아직 로드 안 됨, 재시도');
+    setTimeout(initTokenClient, 500);
+    return;
+  }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: GOOGLE_SCOPE,
+    callback: handleTokenResponse,
+    error_callback: (err) => {
+      console.error('OAuth 에러:', err);
+      alert('Google 로그인이 취소되었거나 실패했습니다.\n' + (err.message || ''));
+    }
+  });
+}
+
+// ============ OAuth 응답 처리 ============
+async function handleTokenResponse(resp){
+  if(resp.error){
+    console.error('OAuth 응답 에러:', resp);
+    alert('Drive 연결 실패: ' + resp.error);
+    return;
+  }
+  driveAccessToken = resp.access_token;
+
+  // sessionStorage에 토큰 임시 저장 (1시간)
+  const expiresAt = Date.now() + (resp.expires_in ? resp.expires_in * 1000 : 3600000);
+  sessionStorage.setItem(DRIVE_TOKEN_KEY, JSON.stringify({
+    token: driveAccessToken,
+    expiresAt: expiresAt
+  }));
+
+  // 사용자 정보 가져오기 (이메일 확인)
+  let userEmail = '-';
+  try{
+    const r = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: 'Bearer ' + driveAccessToken }
+    });
+    if(r.ok){
+      const u = await r.json();
+      userEmail = u.email || '-';
+    }
+  }catch(e){ console.warn('사용자 정보 조회 실패:', e); }
+
+  // Firebase에 연결 상태 저장
+  await set(ref(db, 'tax_helper/driveAuth/status'), {
+    connected: true,
+    email: userEmail,
+    connectedAt: Date.now(),
+    connectedBy: currentSession.email,
+    rootFolderName: ROOT_FOLDER_NAME
+  });
+
+  // 감사 로그
+  try{
+    const auditRef = push(ref(db, 'tax_helper/audit'));
+    await set(auditRef, {
+      action: 'drive_connect',
+      user: currentSession.email,
+      driveEmail: userEmail,
+      timestamp: Date.now()
+    });
+  }catch(e){ console.warn('감사 로그 실패:', e); }
+
+  alert('✅ Google Drive 연결 완료!\n계정: ' + userEmail);
+  await checkDriveStatus();
+}
+
+// ============ Drive 연결 시작 ============
+window.doConnect = () => {
+  if(!tokenClient){
+    alert('Google 로그인 모듈이 아직 로드되지 않았습니다. 잠시 후 다시 시도해주세요.');
+    initTokenClient();
+    return;
+  }
+  // prompt='consent' = 매번 동의 화면 보이기 (개발 중에 유용)
+  // 운영 시에는 빼도 됨
+  tokenClient.requestAccessToken({ prompt: 'consent' });
+};
+
+// ============ Drive 연결 해제 ============
+window.doDisconnect = async () => {
+  if(!confirm('정말로 Drive 연결을 해제하시겠습니까?\n\n폴더와 파일은 Drive에 그대로 남아있지만, 세무 앱에서 더 이상 접근할 수 없게 됩니다.')) return;
+
+  try{
+    // 토큰 폐기 (가능하면)
+    if(driveAccessToken){
+      try{
+        await fetch('https://oauth2.googleapis.com/revoke?token=' + driveAccessToken, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+      }catch(e){ console.warn('토큰 폐기 실패:', e); }
+    }
+
+    // Firebase에서 연결 상태 해제
+    await set(ref(db, 'tax_helper/driveAuth/status'), {
+      connected: false,
+      disconnectedAt: Date.now(),
+      disconnectedBy: currentSession.email
+    });
+
+    // 감사 로그
+    try{
+      const auditRef = push(ref(db, 'tax_helper/audit'));
+      await set(auditRef, {
+        action: 'drive_disconnect',
+        user: currentSession.email,
+        timestamp: Date.now()
+      });
+    }catch(e){ console.warn('감사 로그 실패:', e); }
+
+    // 로컬 토큰 삭제
+    sessionStorage.removeItem(DRIVE_TOKEN_KEY);
+    driveAccessToken = null;
+
+    alert('✅ Drive 연결이 해제되었습니다.');
+    await checkDriveStatus();
+  }catch(e){
+    console.error('연결 해제 실패:', e);
+    alert('❌ 연결 해제 실패: ' + e.message);
+  }
+};
+
+// ============ Drive API 헬퍼 ============
+async function driveApi(url, options = {}){
+  if(!driveAccessToken){
+    throw new Error('Drive 액세스 토큰이 없습니다. 먼저 연결해주세요.');
+  }
+  const headers = options.headers || {};
+  headers['Authorization'] = 'Bearer ' + driveAccessToken;
+  if(options.body && !headers['Content-Type']){
+    headers['Content-Type'] = 'application/json';
+  }
+  const r = await fetch(url, { ...options, headers });
+  if(!r.ok){
+    const text = await r.text();
+    throw new Error(`Drive API 에러 (${r.status}): ${text}`);
+  }
+  return r.json();
+}
+
+// 폴더 검색 (이름과 부모로)
+async function findFolder(name, parentId){
+  const q = `name='${name.replace(/'/g, "\\'")}' and mimeType='application/vnd.google-apps.folder' and trashed=false` +
+    (parentId ? ` and '${parentId}' in parents` : ` and 'root' in parents`);
+  const url = 'https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent(q) + '&fields=files(id,name)';
+  const data = await driveApi(url);
+  return data.files && data.files.length > 0 ? data.files[0] : null;
+}
+
+// 폴더 생성 (없으면 만들고, 있으면 기존 반환)
+async function ensureFolder(name, parentId){
+  const existing = await findFolder(name, parentId);
+  if(existing) return { ...existing, created: false };
+
+  const body = {
+    name: name,
+    mimeType: 'application/vnd.google-apps.folder'
+  };
+  if(parentId) body.parents = [parentId];
+
+  const created = await driveApi('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    body: JSON.stringify(body)
+  });
+  return { ...created, created: true };
+}
+
+// ============ 폴더 자동 생성 ============
+window.doCreateFolders = async () => {
+  if(!driveAccessToken){
+    alert('Drive 토큰이 없습니다. "재연결" 버튼을 눌러주세요.');
+    return;
+  }
+
+  const btn = document.getElementById('btnCreateFolders');
+  btn.disabled = true;
+  const list = document.getElementById('progressList');
+  list.classList.remove('hidden');
+  list.innerHTML = '';
+
+  function addProgress(text, status){
+    const div = document.createElement('div');
+    div.className = 'progress-item ' + (status || 'doing');
+    let icon = '⏳';
+    if(status === 'done') icon = '✅';
+    if(status === 'error') icon = '❌';
+    if(status === 'doing') icon = '<div class="spinner"></div>';
+    div.innerHTML = `<span>${icon}</span> ${text}`;
+    list.appendChild(div);
+    return div;
+  }
+
+  try{
+    // 1. 메인 폴더 (세무자료)
+    const mainItem = addProgress(`메인 폴더 "${ROOT_FOLDER_NAME}" 확인/생성 중...`, 'doing');
+    const mainFolder = await ensureFolder(ROOT_FOLDER_NAME, null);
+    mainItem.className = 'progress-item done';
+    mainItem.innerHTML = `<span>✅</span> 메인 폴더 "${ROOT_FOLDER_NAME}" ${mainFolder.created ? '생성됨' : '기존 사용'} (ID: ${mainFolder.id.substring(0,8)}...)`;
+
+    // 2. 현재 년월 계산
+    const now = new Date();
+    const yearMonth = `${now.getFullYear()}_${String(now.getMonth()+1).padStart(2,'0')}`;
+
+    // 3. 각 법인 폴더 생성
+    const settings = {};
+    for(const compKey of Object.keys(COMPANIES)){
+      const comp = COMPANIES[compKey];
+
+      // 법인 폴더
+      const compItem = addProgress(`법인 폴더 "${comp.name}" 확인/생성 중...`, 'doing');
+      const compFolder = await ensureFolder(comp.name, mainFolder.id);
+      compItem.className = 'progress-item done';
+      compItem.innerHTML = `<span>✅</span> 법인 폴더 "${comp.name}" ${compFolder.created ? '생성됨' : '기존 사용'}`;
+
+      // 월별 폴더
+      const monthItem = addProgress(`${comp.name}/${yearMonth} 폴더 확인/생성 중...`, 'doing');
+      const monthFolder = await ensureFolder(yearMonth, compFolder.id);
+      monthItem.className = 'progress-item done';
+      monthItem.innerHTML = `<span>✅</span> ${comp.name}/${yearMonth} ${monthFolder.created ? '생성됨' : '기존 사용'}`;
+
+      // 하위 폴더 (병렬 처리하면 빠르지만 한도 걸릴 수 있어 순차 처리)
+      const subFolderIds = {};
+      for(const sub of comp.subFolders){
+        const subItem = addProgress(`└ ${sub.name} 확인/생성 중...`, 'doing');
+        const subFolder = await ensureFolder(sub.name, monthFolder.id);
+        subItem.className = 'progress-item done';
+        subItem.innerHTML = `<span>✅</span> └ ${sub.name} ${subFolder.created ? '생성' : '기존'}`;
+        subFolderIds[sub.idx] = { id: subFolder.id, name: sub.name };
+      }
+
+      settings[compKey] = {
+        driveFolderId: compFolder.id,
+        fullName: comp.fullName,
+        subFolders: comp.subFolders.map(s => ({ idx: s.idx, name: s.name, enabled: true }))
+      };
+    }
+
+    // 4. Firebase에 설정 저장
+    const finishItem = addProgress('Firebase에 폴더 정보 저장 중...', 'doing');
+    await set(ref(db, 'tax_helper/settings/companies'), settings);
+    await set(ref(db, 'tax_helper/settings/rootFolderId'), mainFolder.id);
+    await set(ref(db, 'tax_helper/settings/rootFolderName'), ROOT_FOLDER_NAME);
+    finishItem.className = 'progress-item done';
+    finishItem.innerHTML = '<span>✅</span> Firebase 저장 완료';
+
+    // 감사 로그
+    try{
+      const auditRef = push(ref(db, 'tax_helper/audit'));
+      await set(auditRef, {
+        action: 'folder_setup',
+        user: currentSession.email,
+        timestamp: Date.now(),
+        details: 'AMT/KY/BEST 법인 폴더 및 ' + yearMonth + ' 월별 폴더 생성'
+      });
+    }catch(e){ console.warn('감사 로그 실패:', e); }
+
+    addProgress(`🎉 모든 폴더 생성 완료!`, 'done');
+    document.getElementById('btnRefreshFolders').classList.remove('hidden');
+    btn.textContent = '✅ 생성 완료';
+  }catch(e){
+    console.error('폴더 생성 실패:', e);
+    addProgress('❌ 폴더 생성 실패: ' + e.message, 'error');
+    btn.disabled = false;
+    alert('폴더 생성 중 오류가 발생했습니다.\n' + e.message + '\n\n토큰이 만료되었을 수 있습니다. "재연결"을 시도해보세요.');
+  }
+};
+
+// ============ 폴더 상태 새로고침 ============
+window.doRefreshFolders = async () => {
+  const card = document.getElementById('folderStatusCard');
+  const content = document.getElementById('folderStatusContent');
+  card.classList.remove('hidden');
+  content.innerHTML = '<div class="spinner"></div> 폴더 상태 확인 중...';
+
+  try{
+    const snap = await get(ref(db, 'tax_helper/settings/companies'));
+    if(!snap.exists()){
+      content.innerHTML = '❌ 폴더 정보가 없습니다. 먼저 폴더를 생성해주세요.';
+      return;
+    }
+    const settings = snap.val();
+    let html = '';
+    for(const compKey of Object.keys(settings)){
+      const comp = settings[compKey];
+      html += `<div style="margin-bottom:12px;"><strong>📁 ${compKey}</strong> (${comp.fullName || '-'})<br>`;
+      html += `&nbsp;&nbsp;&nbsp;Drive ID: <code>${comp.driveFolderId || '-'}</code><br>`;
+      if(comp.subFolders){
+        html += `&nbsp;&nbsp;&nbsp;하위 폴더: ${comp.subFolders.length}개`;
+        html += `<ul style="margin:4px 0 0 24px;padding:0;list-style:circle;">`;
+        for(const sf of comp.subFolders){
+          html += `<li>${sf.name} ${sf.enabled === false ? '<span style="color:#ef4444">(비활성)</span>' : ''}</li>`;
+        }
+        html += `</ul>`;
+      }
+      html += `</div>`;
+    }
+    content.innerHTML = html;
+  }catch(e){
+    content.innerHTML = '❌ 조회 실패: ' + e.message;
+  }
+};
+
+// ============ 시작 ============
+onAuthStateChanged(auth, async user => {
+  if(!user){
+    alert('Firebase 세션이 만료되었습니다. 다시 로그인해주세요.');
+    location.replace('index.html');
+    return;
+  }
+  // Google Identity Services 초기화 시도
+  initTokenClient();
+  // Drive 상태 확인
+  await checkDriveStatus();
+});
+
+// Service Worker 등록
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js?v=20260524-v3')
+    .then(reg => console.log('[SW] 등록 완료'))
+    .catch(err => console.log('[SW] 등록 실패:', err));
+}
+</script>
+
+</body>
+</html>
