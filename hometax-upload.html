@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>홈택스 엑셀 업로드 - 세무자료 도우미</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#16a34a">
+
+  <style>
+    :root{
+      --green:#16a34a;--green-dark:#15803d;--green-light:#dcfce7;
+      --red:#ef4444;--orange:#f59e0b;--blue:#3b82f6;--purple:#8b5cf6;
+      --gray:#6b7280;--gray-light:#f3f4f6;--border:#e5e7eb;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;background:#f9fafb;min-height:100vh;color:#111;}
+
+    .header{background:#fff;border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10;}
+    .logo-icon{width:36px;height:36px;background:var(--purple);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;}
+    .header-title{font-size:1rem;font-weight:800;}
+    .header-sub{font-size:.7rem;color:var(--gray);}
+    .back-btn{padding:6px 12px;background:var(--gray-light);border:none;border-radius:6px;font-size:.8rem;font-weight:600;cursor:pointer;}
+
+    .container{max-width:1000px;margin:0 auto;padding:20px;}
+
+    .card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:16px;}
+    .card-title{font-size:1rem;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+
+    .biz-numbers{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;}
+    .biz-item{padding:14px 16px;border:1.5px solid var(--border);border-radius:10px;}
+    .biz-item-label{font-size:.75rem;color:var(--gray);font-weight:700;text-transform:uppercase;margin-bottom:4px;}
+    .biz-item-name{font-weight:800;margin-bottom:6px;}
+    .biz-item-number{font-family:monospace;font-size:1rem;font-weight:700;color:#1e40af;}
+
+    .upload-area{border:2.5px dashed var(--border);border-radius:14px;padding:40px 20px;text-align:center;cursor:pointer;transition:all .2s;}
+    .upload-area:hover{border-color:var(--purple);background:#faf5ff;}
+    .upload-area.dragover{border-color:var(--purple);background:#ede9fe;}
+    .upload-icon{font-size:3rem;margin-bottom:10px;}
+    .upload-text{font-size:1rem;font-weight:700;margin-bottom:6px;}
+    .upload-sub{font-size:.85rem;color:var(--gray);}
+    .upload-area input[type=file]{display:none;}
+
+    .file-info{margin-top:12px;padding:12px 14px;background:var(--gray-light);border-radius:8px;display:flex;align-items:center;gap:10px;font-size:.88rem;}
+    .file-info.hidden{display:none;}
+    .file-icon{font-size:1.5rem;}
+    .file-name{flex:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .file-size{font-size:.78rem;color:var(--gray);}
+
+    .info-banner{padding:14px 16px;border-radius:10px;font-size:.85rem;line-height:1.6;margin-bottom:16px;}
+    .info-banner.info{background:#dbeafe;border:1px solid #bfdbfe;color:#1e40af;}
+    .info-banner.warn{background:#fef3c7;border:1px solid #fde68a;color:#92400e;}
+    .info-banner.error{background:#fee2e2;border:1px solid #fecaca;color:#991b1b;}
+
+    .preview-table-wrap{overflow-x:auto;margin-top:14px;border-radius:8px;border:1px solid var(--border);}
+    .preview-table{width:100%;border-collapse:collapse;font-size:.78rem;}
+    .preview-table th{background:var(--gray-light);padding:8px 10px;text-align:left;font-weight:700;font-size:.72rem;border-bottom:1px solid var(--border);}
+    .preview-table td{padding:7px 10px;border-bottom:1px solid var(--gray-light);}
+    .preview-table tr:last-child td{border-bottom:none;}
+    .preview-table td.num{text-align:right;font-family:monospace;}
+    .preview-table td.comp{font-weight:700;padding:3px 6px;}
+    .preview-table td.comp .AMT{color:#1e40af;}
+    .preview-table td.comp .KY{color:#9d174d;}
+    .preview-table td.comp .BEST{color:#9a3412;}
+    .preview-table .err{background:#fee2e2;}
+
+    .btn{padding:11px 20px;border:none;border-radius:10px;font-size:.92rem;font-weight:700;cursor:pointer;transition:opacity .2s;}
+    .btn-primary{background:var(--green);color:#fff;}
+    .btn-primary:hover{opacity:.9;}
+    .btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+    .btn-secondary{background:var(--gray-light);color:#374151;}
+    .btn-warn{background:var(--orange);color:#fff;}
+
+    .action-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
+
+    .progress-log{margin-top:14px;max-height:340px;overflow-y:auto;background:var(--gray-light);border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;line-height:1.7;}
+    .log-item{padding:3px 0;}
+    .log-item.done{color:var(--green-dark);}
+    .log-item.error{color:var(--red);}
+    .log-item.info{color:var(--blue);}
+    .log-item.warn{color:var(--orange);}
+    .log-item.gray{color:var(--gray);}
+
+    .summary-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:14px;}
+    .stat-item{padding:12px;background:var(--gray-light);border-radius:8px;text-align:center;}
+    .stat-num{font-size:1.5rem;font-weight:800;}
+    .stat-num.new{color:var(--green-dark);}
+    .stat-num.skip{color:var(--gray);}
+    .stat-num.err{color:var(--red);}
+    .stat-label{font-size:.7rem;color:var(--gray);margin-top:3px;}
+
+    .type-selector{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+    .type-option{padding:14px 16px;border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;text-align:center;}
+    .type-option:hover{border-color:var(--purple);}
+    .type-option.active{background:#ede9fe;border-color:var(--purple);}
+    .type-option-icon{font-size:1.5rem;margin-bottom:5px;}
+    .type-option-title{font-weight:800;margin-bottom:3px;}
+    .type-option-desc{font-size:.72rem;color:var(--gray);}
+
+    .small-text{font-size:.72rem;color:var(--gray);margin-top:8px;line-height:1.5;}
+    .hidden{display:none !important;}
+
+    .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:12px 20px;border-radius:8px;font-size:.88rem;z-index:200;opacity:0;transition:opacity .2s;}
+    .toast.show{opacity:1;}
+    .toast.error{background:var(--red);}
+    .toast.success{background:var(--green);}
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <button class="back-btn" onclick="goBack()">← 메인</button>
+  <div class="logo-icon">📊</div>
+  <div>
+    <div class="header-title">홈택스 엑셀 업로드</div>
+    <div class="header-sub">세금계산서 자동 분류 및 등록</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- 1. 사업자번호 (자동 등록됨) -->
+  <div class="card">
+    <div class="card-title">🏢 사업자번호 매칭</div>
+    <div class="biz-numbers" id="bizNumbers">
+      <div class="biz-item">
+        <div class="biz-item-label">AMT</div>
+        <div class="biz-item-name">㈜에이엠티코리아</div>
+        <div class="biz-item-number">110-81-99978</div>
+      </div>
+      <div class="biz-item">
+        <div class="biz-item-label">KY</div>
+        <div class="biz-item-name">㈜케이와이메디칼</div>
+        <div class="biz-item-number">110-86-00994</div>
+      </div>
+      <div class="biz-item">
+        <div class="biz-item-label">BEST</div>
+        <div class="biz-item-name">㈜베스트메디아</div>
+        <div class="biz-item-number">110-86-12258</div>
+      </div>
+    </div>
+    <div class="small-text">💡 엑셀의 공급자/공급받는자 등록번호로 어느 법인의 매출/매입인지 자동 판단합니다.</div>
+  </div>
+
+  <!-- 2. 엑셀 종류 선택 -->
+  <div class="card">
+    <div class="card-title">📁 엑셀 종류 선택</div>
+    <div class="type-selector">
+      <div class="type-option active" data-type="auto" onclick="selectType('auto')">
+        <div class="type-option-icon">🤖</div>
+        <div class="type-option-title">자동 판단</div>
+        <div class="type-option-desc">사업자번호로 매출/매입 자동 분류 (추천)</div>
+      </div>
+      <div class="type-option" data-type="sale" onclick="selectType('sale')">
+        <div class="type-option-icon">📤</div>
+        <div class="type-option-title">매출만</div>
+        <div class="type-option-desc">우리가 발행한 세금계산서</div>
+      </div>
+    </div>
+    <div class="info-banner info">
+      💡 <strong>자동 판단</strong>: 엑셀의 각 행에서 공급자 사업자번호 = 우리 법인이면 매출, 공급받는자 사업자번호 = 우리 법인이면 매입으로 분류합니다.
+    </div>
+  </div>
+
+  <!-- 3. 파일 업로드 -->
+  <div class="card">
+    <div class="card-title">📤 엑셀 파일 선택</div>
+    <label class="upload-area" for="fileInput" id="uploadArea">
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" onchange="onFileSelect(this)">
+      <div class="upload-icon">📊</div>
+      <div class="upload-text">엑셀 파일을 클릭하여 업로드</div>
+      <div class="upload-sub">.xlsx, .xls, .csv 지원</div>
+    </label>
+    <div class="file-info hidden" id="fileInfo">
+      <div class="file-icon">📄</div>
+      <div class="file-name" id="fileName"></div>
+      <div class="file-size" id="fileSize"></div>
+    </div>
+    <div class="action-row hidden" id="parseActions">
+      <button class="btn btn-secondary" onclick="doParseSimulate()">🔍 미리보기 (저장 안 함)</button>
+      <button class="btn btn-primary" onclick="doParseAndSave()">💾 자동 분류 + 저장</button>
+    </div>
+  </div>
+
+  <!-- 4. 미리보기 -->
+  <div class="card hidden" id="previewCard">
+    <div class="card-title">📋 분석 결과 미리보기</div>
+    <div id="previewSummary"></div>
+    <div class="preview-table-wrap">
+      <table class="preview-table" id="previewTable">
+        <thead>
+          <tr>
+            <th>날짜</th>
+            <th>구분</th>
+            <th>법인</th>
+            <th>거래처</th>
+            <th>공급가액</th>
+            <th>세액</th>
+            <th>합계</th>
+            <th>상태</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 5. 결과 -->
+  <div class="card hidden" id="resultCard">
+    <div class="card-title">📊 저장 결과</div>
+    <div class="summary-stats" id="resultStats"></div>
+    <div class="progress-log" id="progressLog"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getDatabase, ref, get, set, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const FB_CFG = {
+  apiKey: "AIzaSyD6kmefRjjORwWBIyDl1n105bGG7rJf8iQ",
+  authDomain: "amt-tax.firebaseapp.com",
+  databaseURL: "https://amt-tax-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "amt-tax",
+  storageBucket: "amt-tax.firebasestorage.app",
+  messagingSenderId: "759927124180",
+  appId: "1:759927124180:web:20b471702af9ee32354b41"
+};
+
+const SESSION_KEY = 'tax_auth_session';
+
+const app = getApps().find(a => a.name === 'amt-tax-app') || initializeApp(FB_CFG, 'amt-tax-app');
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+function getSession(){
+  try{ const r=sessionStorage.getItem(SESSION_KEY); return r?JSON.parse(r):null; }catch(e){ return null; }
+}
+const sess = getSession();
+if(!sess){ location.replace('index.html'); }
+
+// 사업자번호 매핑 (Image에서 확인된 값)
+const BIZ_NUMBERS = {
+  '1108199978': { company: 'AMT', name: '㈜에이엠티코리아' },
+  '1108600994': { company: 'KY', name: '㈜케이와이메디칼' },
+  '1108612258': { company: 'BEST', name: '㈜베스트메디아' }
+};
+
+// 상태
+let currentFile = null;
+let parsedData = null;
+let uploadType = 'auto'; // 'auto' | 'sale'
+
+window.goBack = () => { location.href = 'main.html'; };
+
+function showToast(msg, type){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type || '');
+  setTimeout(()=>t.classList.remove('show'), 2500);
+}
+
+function escapeHtml(s){
+  if(s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function fmt(n){ return (n || 0).toLocaleString('ko-KR'); }
+
+window.selectType = (type) => {
+  uploadType = type;
+  document.querySelectorAll('.type-option').forEach(o => {
+    o.classList.toggle('active', o.dataset.type === type);
+  });
+};
+
+// ============ 파일 선택 ============
+window.onFileSelect = (input) => {
+  if(!input.files || input.files.length === 0) return;
+  const f = input.files[0];
+  currentFile = f;
+  parsedData = null;  // ⭐ 이전 파일의 파싱 결과 리셋
+  document.getElementById('fileInfo').classList.remove('hidden');
+  document.getElementById('fileName').textContent = f.name;
+  document.getElementById('fileSize').textContent = formatSize(f.size);
+  document.getElementById('parseActions').classList.remove('hidden');
+  // 이전 결과 숨기기
+  document.getElementById('previewCard').classList.add('hidden');
+  document.getElementById('resultCard').classList.add('hidden');
+};
+
+function formatSize(b){
+  if(b < 1024) return b + 'B';
+  if(b < 1024*1024) return (b/1024).toFixed(1) + 'KB';
+  return (b/(1024*1024)).toFixed(1) + 'MB';
+}
+
+// 드래그앤드롭
+const uploadArea = document.getElementById('uploadArea');
+['dragover','dragenter'].forEach(ev => {
+  uploadArea.addEventListener(ev, e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+});
+['dragleave','drop'].forEach(ev => {
+  uploadArea.addEventListener(ev, e => { e.preventDefault(); uploadArea.classList.remove('dragover'); });
+});
+uploadArea.addEventListener('drop', e => {
+  e.preventDefault();
+  if(e.dataTransfer.files && e.dataTransfer.files[0]){
+    document.getElementById('fileInput').files = e.dataTransfer.files;
+    onFileSelect(document.getElementById('fileInput'));
+  }
+});
+
+// ============ 엑셀 파싱 ============
+async function loadSheetJS(){
+  // SheetJS (XLSX) 동적 로드
+  if(window.XLSX) return window.XLSX;
+  return new Promise((res, rej) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    script.onload = () => res(window.XLSX);
+    script.onerror = () => rej(new Error('SheetJS 로드 실패'));
+    document.head.appendChild(script);
+  });
+}
+
+async function parseFile(file){
+  const XLSX = await loadSheetJS();
+  const data = await file.arrayBuffer();
+  const wb = XLSX.read(data, { type: 'array', cellDates: false });
+  const firstSheet = wb.SheetNames[0];
+  const sheet = wb.Sheets[firstSheet];
+  // JSON 변환 — header: 1 = 첫 행이 헤더
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
+  return rows;
+}
+
+// 컬럼 자동 매핑 (홈택스 엑셀의 다양한 헤더에 대응)
+function findColumnIndex(headerRow, keywords){
+  for(let i = 0; i < headerRow.length; i++){
+    const cell = String(headerRow[i] || '').replace(/\s+/g, '');
+    for(const kw of keywords){
+      if(cell.includes(kw)) return i;
+    }
+  }
+  return -1;
+}
+
+function findHeaderRow(rows){
+  // 첫 20행 안에서 헤더 찾기
+  // "작성일자", "공급자등록번호" 같은 키워드를 가진 행
+  for(let i = 0; i < Math.min(20, rows.length); i++){
+    const row = rows[i];
+    const joined = row.map(c => String(c || '')).join('|');
+    if(/작성일자|작성년월일|발급일자/.test(joined) && /등록번호|사업자/.test(joined)){
+      return i;
+    }
+  }
+  // 못 찾으면 0번 (첫 행)
+  return 0;
+}
+
+function normalizeBizNumber(s){
+  if(s == null) return '';
+  return String(s).replace(/[^0-9]/g, '');  // 숫자만 남김
+}
+
+function parseDate(s){
+  if(!s) return null;
+  s = String(s).trim();
+  // 20260523 (8자리 숫자)
+  let m = s.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if(m) return `${m[1]}-${m[2]}-${m[3]}`;
+  // 2026-05-23, 2026-5-23, 2026.05.23, 2026/05/23 등
+  m = s.match(/^(\d{4})[-\.\/](\d{1,2})[-\.\/](\d{1,2})$/);
+  if(m){
+    return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+  }
+  // 2026년 5월 23일
+  m = s.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
+  if(m){
+    return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+  }
+  // Excel 시리얼 날짜 (숫자) - 1900-01-01 기준
+  const num = parseInt(s, 10);
+  if(!isNaN(num) && num > 40000 && num < 60000){
+    // Excel serial date
+    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+    const d = new Date(excelEpoch.getTime() + num * 86400000);
+    const y = d.getUTCFullYear();
+    const mo = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const da = String(d.getUTCDate()).padStart(2, '0');
+    return `${y}-${mo}-${da}`;
+  }
+  return null;
+}
+
+function parseAmount(s){
+  if(s == null || s === '') return 0;
+  const cleaned = String(s).replace(/[^0-9.-]/g, '');
+  return parseInt(cleaned, 10) || 0;
+}
+
+// 분석 함수
+function analyzeRows(rows){
+  if(rows.length === 0){
+    throw new Error('엑셀이 비어있습니다');
+  }
+
+  // 헤더 행 찾기
+  const headerIdx = findHeaderRow(rows);
+  const header = rows[headerIdx];
+
+  // 컬럼 인덱스 매핑
+  const cols = {
+    date: findColumnIndex(header, ['작성일자','작성년월일','발급일자','거래일자']),
+    supplierBiz: findColumnIndex(header, ['공급자등록번호','공급자사업자등록번호','공급자사업자번호']),
+    supplierName: findColumnIndex(header, ['공급자상호','공급자명','공급자']),
+    buyerBiz: findColumnIndex(header, ['공급받는자등록번호','공급받는자사업자등록번호','공급받는자사업자번호']),
+    buyerName: findColumnIndex(header, ['공급받는자상호','공급받는자명','공급받는자']),
+    supply: findColumnIndex(header, ['공급가액']),
+    vat: findColumnIndex(header, ['세액','부가세','부가가치세']),
+    total: findColumnIndex(header, ['합계금액','합계','총금액','총합계']),
+    item: findColumnIndex(header, ['품목','상품','품명']),
+    memo: findColumnIndex(header, ['비고','메모','적요'])
+  };
+
+  // 필수 컬럼 확인
+  if(cols.date === -1 || cols.supplierBiz === -1){
+    throw new Error('엑셀 형식을 인식할 수 없습니다.\n작성일자/공급자등록번호 컬럼이 필요합니다.');
+  }
+
+  // 데이터 행들 파싱
+  const records = [];
+  const errors = [];
+  for(let i = headerIdx + 1; i < rows.length; i++){
+    const row = rows[i];
+    if(!row || row.length === 0 || !row.some(c => c)) continue; // 빈 행 스킵
+
+    const date = parseDate(row[cols.date]);
+    const supplierBiz = normalizeBizNumber(row[cols.supplierBiz]);
+    const supplierName = cols.supplierName >= 0 ? String(row[cols.supplierName]||'').trim() : '';
+    const buyerBiz = cols.buyerBiz >= 0 ? normalizeBizNumber(row[cols.buyerBiz]) : '';
+    const buyerName = cols.buyerName >= 0 ? String(row[cols.buyerName]||'').trim() : '';
+    const supply = cols.supply >= 0 ? parseAmount(row[cols.supply]) : 0;
+    const vat = cols.vat >= 0 ? parseAmount(row[cols.vat]) : 0;
+    const total = cols.total >= 0 ? parseAmount(row[cols.total]) : (supply + vat);
+    const item = cols.item >= 0 ? String(row[cols.item]||'').trim() : '';
+    const memo = cols.memo >= 0 ? String(row[cols.memo]||'').trim() : '';
+
+    if(!date){
+      errors.push({ row: i+1, reason: '날짜 파싱 실패: ' + row[cols.date] });
+      continue;
+    }
+    if(total <= 0){
+      errors.push({ row: i+1, reason: '금액 0' });
+      continue;
+    }
+
+    // 우리 법인 매칭
+    const supplierComp = BIZ_NUMBERS[supplierBiz];
+    const buyerComp = BIZ_NUMBERS[buyerBiz];
+
+    let direction = null; // 'sale' or 'purchase'
+    let myCompany = null;
+    let otherName = '';
+
+    if(supplierComp){
+      // 우리가 공급자 → 매출
+      direction = 'sale';
+      myCompany = supplierComp.company;
+      otherName = buyerName || '(미상)';
+    } else if(buyerComp){
+      // 우리가 공급받는자 → 매입
+      direction = 'purchase';
+      myCompany = buyerComp.company;
+      otherName = supplierName || '(미상)';
+    } else {
+      errors.push({ row: i+1, reason: '우리 법인 사업자번호와 매칭 안 됨', detail: { supplierBiz, buyerBiz } });
+      continue;
+    }
+
+    // uploadType == 'sale'이면 매입은 스킵
+    if(uploadType === 'sale' && direction !== 'sale'){
+      continue;
+    }
+
+    records.push({
+      date,
+      direction,
+      myCompany,
+      otherName,
+      otherBiz: direction === 'sale' ? buyerBiz : supplierBiz,
+      supply,
+      vat,
+      total,
+      item,
+      memo,
+      rowNum: i + 1
+    });
+  }
+
+  return { records, errors, totalRows: rows.length - headerIdx - 1, header };
+}
+
+// ============ 미리보기 ============
+window.doParseSimulate = async () => {
+  if(!currentFile){ showToast('파일을 먼저 선택하세요', 'error'); return; }
+  try{
+    const rows = await parseFile(currentFile);
+    parsedData = analyzeRows(rows);
+    showPreview(parsedData);
+  }catch(e){
+    console.error(e);
+    showToast('❌ ' + e.message, 'error');
+  }
+};
+
+function showPreview(data){
+  const card = document.getElementById('previewCard');
+  card.classList.remove('hidden');
+
+  // 요약
+  const saleCount = data.records.filter(r => r.direction === 'sale').length;
+  const purchaseCount = data.records.filter(r => r.direction === 'purchase').length;
+  const totalSale = data.records.filter(r => r.direction === 'sale').reduce((s,r) => s + r.total, 0);
+  const totalPurchase = data.records.filter(r => r.direction === 'purchase').reduce((s,r) => s + r.total, 0);
+
+  // 법인별
+  const byCompany = {};
+  data.records.forEach(r => {
+    const key = `${r.myCompany}/${r.direction === 'sale' ? '매출' : '매입'}`;
+    if(!byCompany[key]) byCompany[key] = { count: 0, total: 0 };
+    byCompany[key].count++;
+    byCompany[key].total += r.total;
+  });
+
+  let summaryHtml = `
+    <div class="summary-stats">
+      <div class="stat-item"><div class="stat-num new">${data.records.length}</div><div class="stat-label">유효 거래</div></div>
+      <div class="stat-item"><div class="stat-num skip">${data.errors.length}</div><div class="stat-label">오류 행</div></div>
+      <div class="stat-item"><div class="stat-num" style="color:#1e40af;">${saleCount}</div><div class="stat-label">매출</div></div>
+      <div class="stat-item"><div class="stat-num" style="color:#9d174d;">${purchaseCount}</div><div class="stat-label">매입</div></div>
+    </div>
+    <div style="margin-top:14px;padding:14px;background:var(--gray-light);border-radius:8px;font-size:.85rem;">
+      <div style="font-weight:800;margin-bottom:8px;">법인별 집계:</div>
+      ${Object.entries(byCompany).map(([k,v]) => 
+        `<div style="display:flex;justify-content:space-between;padding:3px 0;">
+          <span>${escapeHtml(k)}</span>
+          <span><strong>${v.count}건</strong> / ${fmt(v.total)}원</span>
+        </div>`
+      ).join('')}
+      <div style="border-top:1px dashed #ccc;margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;font-weight:800;">
+        <span>매출 합계</span>
+        <span style="color:#16a34a;">${fmt(totalSale)}원</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-weight:800;">
+        <span>매입 합계</span>
+        <span style="color:#ef4444;">${fmt(totalPurchase)}원</span>
+      </div>
+    </div>`;
+
+  // 오류 표시
+  if(data.errors.length > 0){
+    summaryHtml += `
+      <div class="info-banner warn" style="margin-top:14px;">
+        <strong>⚠️ ${data.errors.length}건 오류 (저장 시 스킵됨)</strong><br>
+        ${data.errors.slice(0, 5).map(e => `· ${e.row}행: ${escapeHtml(e.reason)}`).join('<br>')}
+        ${data.errors.length > 5 ? '<br>· ... (이하 생략)' : ''}
+      </div>`;
+  }
+
+  document.getElementById('previewSummary').innerHTML = summaryHtml;
+
+  // 테이블 (최대 30건만)
+  const tbody = document.getElementById('previewTable').querySelector('tbody');
+  const showRecords = data.records.slice(0, 30);
+  tbody.innerHTML = showRecords.map(r => `
+    <tr>
+      <td>${escapeHtml(r.date)}</td>
+      <td>${r.direction === 'sale' ? '매출' : '매입'}</td>
+      <td class="comp"><span class="${r.myCompany}">${r.myCompany}</span></td>
+      <td>${escapeHtml(r.otherName)}</td>
+      <td class="num">${fmt(r.supply)}</td>
+      <td class="num">${fmt(r.vat)}</td>
+      <td class="num"><strong>${fmt(r.total)}</strong></td>
+      <td>대기</td>
+    </tr>
+  `).join('');
+
+  if(data.records.length > 30){
+    tbody.innerHTML += `<tr><td colspan="8" style="text-align:center;color:#6b7280;">... 외 ${data.records.length - 30}건</td></tr>`;
+  }
+
+  card.scrollIntoView({ behavior: 'smooth' });
+};
+
+// ============ 저장 ============
+window.doParseAndSave = async () => {
+  if(!currentFile){ showToast('파일을 먼저 선택하세요', 'error'); return; }
+
+  // ⭐ 항상 다시 파싱 (사용자가 '자동/매출만' 옵션 변경했을 수도 있음)
+  try{
+    const rows = await parseFile(currentFile);
+    parsedData = analyzeRows(rows);
+    showPreview(parsedData);
+  }catch(e){
+    showToast('❌ ' + e.message, 'error');
+    return;
+  }
+
+  if(parsedData.records.length === 0){
+    showToast('저장할 유효한 거래가 없습니다', 'error');
+    return;
+  }
+
+  if(!confirm(`총 ${parsedData.records.length}건의 거래를 저장합니다.\n이미 저장된 동일 거래는 자동으로 스킵됩니다.\n계속할까요?`)) return;
+
+  await doSave(parsedData);
+};
+
+async function loadExistingHometax(){
+  const snap = await get(ref(db, 'tax_helper/transactions'));
+  const map = {};
+  if(snap.exists()){
+    const all = snap.val();
+    for(const [id, t] of Object.entries(all)){
+      if(t.sourceSystem === 'hometax' && t.sourceId){
+        map[t.sourceId] = { id, ...t };
+      }
+    }
+  }
+  return map;
+}
+
+function makeSourceId(r){
+  // 같은 거래의 식별자: 날짜+양측사업자번호+금액
+  return `hometax_${r.date.replace(/-/g,'')}_${r.otherBiz}_${r.myCompany}_${r.total}_${r.direction}`;
+}
+
+function logProgress(text, type){
+  const log = document.getElementById('progressLog');
+  const div = document.createElement('div');
+  div.className = 'log-item ' + (type || '');
+  div.textContent = text;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+async function doSave(data){
+  const resultCard = document.getElementById('resultCard');
+  const log = document.getElementById('progressLog');
+  resultCard.classList.remove('hidden');
+  log.innerHTML = '';
+
+  const stats = { new: 0, skipped: 0, errors: 0 };
+
+  try{
+    logProgress('▶ 기존 홈택스 거래 확인 중...', 'info');
+    const existing = await loadExistingHometax();
+    logProgress(`  → 기존: ${Object.keys(existing).length}건`, 'gray');
+    logProgress('━━━━━━━━━━━━━━━━━━━', 'gray');
+    logProgress('▶ 저장 시작', 'info');
+
+    for(const r of data.records){
+      try{
+        const sourceId = makeSourceId(r);
+        if(existing[sourceId]){
+          stats.skipped++;
+          continue;
+        }
+
+        const txData = {
+          sourceSystem: 'hometax',
+          sourceType: 'tax_invoice',
+          sourceId,
+          date: r.date,
+          month: r.date.slice(0, 7).replace('-', '_'),
+          company: r.myCompany,
+          category: r.direction === 'sale' ? '01' : '02',
+          txType: r.direction === 'sale' ? 'sale' : 'purchase',
+          amount: r.total,
+          vatIncluded: true,
+          supplyAmount: r.supply,
+          vatAmount: r.vat,
+          vendor: r.otherName,
+          vendorBiz: r.otherBiz,
+          summary: r.item || (r.direction === 'sale' ? '매출 (홈택스)' : '매입 (홈택스)'),
+          payment: 'transfer',
+          memo: r.memo || null,
+          attachments: []
+        };
+
+        const newRef = push(ref(db, 'tax_helper/transactions'));
+        await set(newRef, {
+          ...txData,
+          id: newRef.key,
+          syncedAt: Date.now(),
+          createdAt: Date.now(),
+          createdBy: 'system_hometax',
+          createdByName: '홈택스 엑셀 업로드'
+        });
+        stats.new++;
+        if(stats.new <= 10){
+          logProgress(`  + 신규: ${r.myCompany}/${r.direction==='sale'?'매출':'매입'} ${fmt(r.total)}원 - ${r.otherName}`, 'done');
+        } else if(stats.new === 11){
+          logProgress('  + ... (이하 생략)', 'gray');
+        }
+      }catch(e){
+        console.error('저장 실패:', r, e);
+        stats.errors++;
+        logProgress(`  ❌ 실패: ${e.message}`, 'error');
+      }
+    }
+
+    // 감사 로그
+    try{
+      const auditRef = push(ref(db, 'tax_helper/audit'));
+      await set(auditRef, {
+        action: 'hometax_upload',
+        user: sess.email,
+        timestamp: Date.now(),
+        details: `홈택스: 신규 ${stats.new} / 스킵 ${stats.skipped} / 에러 ${stats.errors}`
+      });
+    }catch(e){}
+
+    logProgress('━━━━━━━━━━━━━━━━━━━', 'gray');
+    logProgress(`🎉 완료! 신규 ${stats.new} / 스킵 ${stats.skipped} / 에러 ${stats.errors}`, 'done');
+
+    document.getElementById('resultStats').innerHTML = `
+      <div class="stat-item"><div class="stat-num new">${stats.new}</div><div class="stat-label">신규</div></div>
+      <div class="stat-item"><div class="stat-num skip">${stats.skipped}</div><div class="stat-label">스킵 (중복)</div></div>
+      <div class="stat-item"><div class="stat-num err">${stats.errors}</div><div class="stat-label">에러</div></div>
+    `;
+
+    showToast(`✅ 저장 완료: 신규 ${stats.new}건`, 'success');
+  }catch(e){
+    console.error(e);
+    logProgress(`❌ 저장 실패: ${e.message}`, 'error');
+    showToast('❌ ' + e.message, 'error');
+  }
+}
+
+// 시작
+onAuthStateChanged(auth, user => {
+  if(!user){
+    alert('세션 만료. 다시 로그인해주세요.');
+    location.replace('index.html');
+    return;
+  }
+});
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js?v=20260524-v7')
+    .then(reg => console.log('[SW] 등록 완료'))
+    .catch(err => console.log('[SW] 등록 실패:', err));
+}
+</script>
+
+</body>
+</html>

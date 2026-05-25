@@ -89,6 +89,7 @@
     .source-manual{background:var(--green-light);color:var(--green-dark);}
     .source-template{background:#fef3c7;color:#92400e;}
     .source-import{background:#cffafe;color:#155e75;}
+    .source-hometax{background:#ede9fe;color:#5b21b6;}
 
     .has-files{display:inline-block;font-size:.7rem;color:var(--gray);}
 
@@ -194,6 +195,7 @@
           <option value="">전체</option>
           <option value="manual">수동 입력</option>
           <option value="amt">AMT 동기화</option>
+          <option value="hometax">홈택스</option>
           <option value="template">반복 거래</option>
           <option value="import">수입통관</option>
         </select>
@@ -303,7 +305,8 @@ const PAYMENT_LABEL = {
 };
 const SOURCE_LABEL = {
   manual:'수동 입력', amt:'AMT 동기화',
-  template:'반복 거래', import:'수입통관'
+  template:'반복 거래', import:'수입통관',
+  hometax:'홈택스'
 };
 
 // ============ 헬퍼 ============
@@ -800,7 +803,7 @@ onAuthStateChanged(auth, user => {
 
 // Service Worker
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js?v=20260524-v5')
+  navigator.serviceWorker.register('sw.js?v=20260524-v7')
     .then(reg => console.log('[SW] 등록 완료'))
     .catch(err => console.log('[SW] 등록 실패:', err));
 }

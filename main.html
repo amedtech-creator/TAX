@@ -189,11 +189,25 @@
       <span class="menu-badge badge-coming">마지막 단계</span>
     </div>
 
-    <div class="menu-card disabled" data-menu="sync-amt">
+    <div class="menu-card" data-menu="sync-amt">
       <div class="menu-icon icon-blue">🔄</div>
       <div class="menu-title">AMT 자동 동기화</div>
       <div class="menu-desc">기존 AMT 시스템 데이터 자동 가져오기</div>
-      <span class="menu-badge badge-coming">준비중</span>
+      <span class="menu-badge badge-new">신규</span>
+    </div>
+
+    <div class="menu-card" data-menu="templates">
+      <div class="menu-icon icon-orange">🔁</div>
+      <div class="menu-title">반복 거래</div>
+      <div class="menu-desc">급여·4대보험·임대료·기장료 자동 등록</div>
+      <span class="menu-badge badge-new">신규</span>
+    </div>
+
+    <div class="menu-card" data-menu="hometax">
+      <div class="menu-icon icon-purple">📊</div>
+      <div class="menu-title">홈택스 엑셀 업로드</div>
+      <div class="menu-desc">세금계산서 자동 분류 (매출/매입)</div>
+      <span class="menu-badge badge-new">신규</span>
     </div>
 
   </div>
@@ -306,6 +320,12 @@ function bindMenuClicks(){
           location.href = 'add-transaction.html';
         } else if(menu === 'transactions'){
           location.href = 'transactions.html';
+        } else if(menu === 'sync-amt'){
+          location.href = 'sync.html';
+        } else if(menu === 'templates'){
+          location.href = 'templates.html';
+        } else if(menu === 'hometax'){
+          location.href = 'hometax-upload.html';
         } else {
           alert('🚧 준비 중인 기능입니다.');
         }
@@ -351,7 +371,7 @@ if(sess){
 
 // Service Worker 등록
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js?v=20260524-v5')
+  navigator.serviceWorker.register('sw.js?v=20260524-v7')
     .then(reg => console.log('[SW] 등록 완료'))
     .catch(err => console.log('[SW] 등록 실패:', err));
 }

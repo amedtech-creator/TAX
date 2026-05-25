@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>반복 거래 - 세무자료 도우미</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#16a34a">
+
+  <style>
+    :root{
+      --green:#16a34a;--green-dark:#15803d;--green-light:#dcfce7;
+      --red:#ef4444;--orange:#f59e0b;--blue:#3b82f6;--purple:#8b5cf6;
+      --gray:#6b7280;--gray-light:#f3f4f6;--border:#e5e7eb;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;background:#f9fafb;min-height:100vh;color:#111;}
+
+    .header{background:#fff;border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10;}
+    .logo-icon{width:36px;height:36px;background:#f59e0b;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;}
+    .header-title{font-size:1rem;font-weight:800;}
+    .header-sub{font-size:.7rem;color:var(--gray);}
+    .back-btn{padding:6px 12px;background:var(--gray-light);border:none;border-radius:6px;font-size:.8rem;font-weight:600;cursor:pointer;}
+
+    .container{max-width:900px;margin:0 auto;padding:20px;}
+
+    .card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:16px;}
+    .card-title{font-size:1rem;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+
+    .info-banner{padding:14px 16px;background:#dbeafe;border:1px solid #bfdbfe;color:#1e40af;border-radius:10px;margin-bottom:16px;font-size:.85rem;line-height:1.6;}
+
+    .template-list{display:grid;gap:14px;}
+    .template-item{padding:14px 16px;border:1.5px solid var(--border);border-radius:10px;}
+    .template-item.disabled{opacity:.55;}
+    .template-item-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px;}
+    .template-name{font-weight:800;font-size:1rem;display:flex;align-items:center;gap:8px;}
+    .template-detail{font-size:.78rem;color:var(--gray);margin-top:3px;}
+    .template-amount{font-size:1.1rem;font-weight:800;color:#111;}
+    .template-amount.salary{color:var(--green-dark);}
+    .template-amount.cost{color:var(--red);}
+
+    .template-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;}
+    .template-meta{font-size:.75rem;color:var(--gray);padding:3px 8px;background:var(--gray-light);border-radius:5px;}
+    .template-meta.company{color:#1e40af;background:#dbeafe;font-weight:700;}
+
+    .btn{padding:8px 14px;border:none;border-radius:7px;font-size:.82rem;font-weight:700;cursor:pointer;}
+    .btn-primary{background:var(--green);color:#fff;}
+    .btn-primary:hover{opacity:.9;}
+    .btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+    .btn-secondary{background:var(--gray-light);color:#374151;}
+    .btn-secondary:hover{background:var(--border);}
+    .btn-warn{background:var(--orange);color:#fff;}
+    .btn-toggle{padding:4px 10px;font-size:.72rem;border-radius:5px;}
+    .btn-toggle.on{background:var(--green);color:#fff;}
+    .btn-toggle.off{background:var(--gray-light);color:var(--gray);}
+
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:50;padding:14px;}
+    .modal-overlay.show{display:flex;}
+    .modal{background:#fff;border-radius:14px;padding:20px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;}
+    .modal-title{font-size:1.05rem;font-weight:800;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;}
+    .modal-close{background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray);}
+
+    .field{margin-bottom:12px;}
+    .field label{display:block;font-size:.78rem;font-weight:700;color:#374151;margin-bottom:4px;}
+    .field input,.field select,.field textarea{
+      width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:7px;font-size:.9rem;
+      outline:none;font-family:inherit;
+    }
+    .field input:focus,.field select:focus{border-color:var(--green);}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+    .modal-actions{display:flex;gap:8px;margin-top:14px;justify-content:flex-end;}
+
+    .insurance-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:6px 0;font-size:.85rem;}
+    .insurance-row input{width:130px;text-align:right;}
+    .insurance-total{padding:10px;background:var(--gray-light);border-radius:7px;margin-top:8px;font-weight:800;text-align:right;}
+
+    .schedule-card{padding:12px;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;margin-bottom:14px;font-size:.82rem;color:#92400e;}
+
+    .progress-log{margin-top:14px;max-height:300px;overflow-y:auto;background:var(--gray-light);border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;line-height:1.7;}
+    .log-item{padding:2px 0;}
+    .log-item.done{color:var(--green-dark);}
+    .log-item.error{color:var(--red);}
+    .log-item.info{color:var(--blue);}
+
+    .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:12px 20px;border-radius:8px;font-size:.88rem;z-index:200;opacity:0;transition:opacity .2s;}
+    .toast.show{opacity:1;}
+    .toast.error{background:var(--red);}
+    .toast.success{background:var(--green);}
+
+    .hidden{display:none !important;}
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <button class="back-btn" onclick="goBack()">← 메인</button>
+  <div class="logo-icon">🔁</div>
+  <div>
+    <div class="header-title">반복 거래 관리</div>
+    <div class="header-sub">매달 자동 등록되는 정기 거래</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="info-banner">
+    💡 매달 발생하는 정기 거래(급여, 4대보험, 임대료, 세무사 기장료)를 자동으로 등록합니다.<br>
+    💡 매년 인상 시 <strong>편집</strong> 버튼으로 금액을 수정할 수 있어요.<br>
+    💡 휴일/주말이면 자동으로 가까운 영업일로 이동합니다.
+  </div>
+
+  <!-- 자동 생성 실행 -->
+  <div class="card">
+    <div class="card-title">▶ 반복 거래 자동 생성</div>
+    
+    <div class="row2" style="margin-bottom:14px;">
+      <div class="field">
+        <label>대상 년도</label>
+        <select id="targetYear"></select>
+      </div>
+      <div class="field">
+        <label>대상 월</label>
+        <select id="targetMonth"></select>
+      </div>
+    </div>
+
+    <div class="schedule-card">
+      <strong>📅 생성될 날짜 미리보기:</strong>
+      <div id="datePreview" style="margin-top:8px;font-size:.8rem;">템플릿을 선택하면 표시됩니다</div>
+    </div>
+
+    <div style="margin-bottom:14px;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;cursor:pointer;">
+        <input type="checkbox" id="overrideDates">
+        <strong>📌 각 거래 날짜 개별 지정</strong> (체크하면 아래에서 변경)
+      </label>
+      <div id="overrideArea" style="display:none;margin-top:10px;padding:12px;background:var(--gray-light);border-radius:8px;">
+        <div style="font-size:.78rem;color:var(--gray);margin-bottom:8px;">각 거래의 날짜를 따로 지정할 수 있습니다:</div>
+        <div id="overrideList"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-secondary" onclick="doSimulate()">🔍 시뮬레이션</button>
+      <button class="btn btn-primary" onclick="doGenerate()">▶ 거래 생성</button>
+    </div>
+    <div class="progress-log hidden" id="progressLog"></div>
+  </div>
+
+  <!-- 템플릿 목록 -->
+  <div class="card">
+    <div class="card-title">📋 반복 거래 템플릿</div>
+    <div class="template-list" id="templateList">
+      <div style="padding:40px;text-align:center;color:#6b7280;">불러오는 중...</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 편집 모달 -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="modalTitle">템플릿 편집</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getDatabase, ref, get, set, update, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const FB_CFG = {
+  apiKey: "AIzaSyD6kmefRjjORwWBIyDl1n105bGG7rJf8iQ",
+  authDomain: "amt-tax.firebaseapp.com",
+  databaseURL: "https://amt-tax-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "amt-tax",
+  storageBucket: "amt-tax.firebasestorage.app",
+  messagingSenderId: "759927124180",
+  appId: "1:759927124180:web:20b471702af9ee32354b41"
+};
+
+const SESSION_KEY = 'tax_auth_session';
+
+const app = getApps().find(a => a.name === 'amt-tax-app') || initializeApp(FB_CFG, 'amt-tax-app');
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+function getSession(){
+  try{ const r=sessionStorage.getItem(SESSION_KEY); return r?JSON.parse(r):null; }catch(e){ return null; }
+}
+const sess = getSession();
+if(!sess){ location.replace('index.html'); }
+
+// 기본 템플릿 (처음 로드 시 없으면 생성)
+const DEFAULT_TEMPLATES = {
+  'salary_kimjina': {
+    id: 'salary_kimjina',
+    name: '김진아 급여 (실수령액)',
+    icon: '💼',
+    company: 'AMT',
+    category: '04',
+    txType: 'salary',
+    amount: 2300000,
+    vatIncluded: false,
+    vendor: '김진아',
+    payment: 'transfer',
+    summary: '직원 급여 (실수령액)',
+    schedule: {
+      type: 'monthly_day',
+      day: 25,
+      holidayRule: 'before' // 휴일/주말이면 전날
+    },
+    enabled: true,
+    order: 1
+  },
+  'insurance_4': {
+    id: 'insurance_4',
+    name: '4대보험',
+    icon: '🏥',
+    company: 'AMT',
+    category: '04',
+    txType: 'salary',
+    amount: 599530,  // 4개 합계
+    vatIncluded: false,
+    vendor: '4대보험공단',
+    payment: 'transfer',
+    summary: '4대보험 (국민연금+건강+고용+산재)',
+    breakdown: {
+      pension: 205180,        // 국민연금
+      health: 288380,         // 국민건강보험
+      employment: 72740,      // 고용보험
+      industrial: 33230       // 산재보험
+    },
+    schedule: {
+      type: 'monthly_day',
+      day: 10,
+      holidayRule: 'after'  // 휴일/주말이면 다음날
+    },
+    enabled: true,
+    order: 2
+  },
+  'rent_amt': {
+    id: 'rent_amt',
+    name: 'AMT 임대료',
+    icon: '🏢',
+    company: 'AMT',
+    category: '03',
+    txType: 'cost',
+    amount: 600000,
+    vatIncluded: false,
+    vendor: '임대인',
+    payment: 'transfer',
+    summary: 'AMT 사무실 임대료',
+    schedule: {
+      type: 'monthly_day',
+      day: 17,
+      holidayRule: 'after'
+    },
+    enabled: true,
+    order: 3
+  },
+  'rent_best': {
+    id: 'rent_best',
+    name: 'BEST 임대료',
+    icon: '🏢',
+    company: 'BEST',
+    category: '03',
+    txType: 'cost',
+    amount: 200000,
+    vatIncluded: false,
+    vendor: '임대인',
+    payment: 'transfer',
+    summary: 'BEST 사무실 임대료',
+    schedule: {
+      type: 'monthly_day',
+      day: 5,
+      holidayRule: 'after'
+    },
+    enabled: true,
+    order: 4
+  },
+  'accounting_amt': {
+    id: 'accounting_amt',
+    name: '세무사 기장료 (AMT)',
+    icon: '📊',
+    company: 'AMT',
+    category: '03',
+    txType: 'cost',
+    amount: 110000,
+    vatIncluded: true,
+    vendor: '세무사사무소',
+    payment: 'transfer',
+    summary: '세무사 기장료 (공급가 100,000 + 부가세 10,000)',
+    schedule: {
+      type: 'monthly_last',
+      holidayRule: 'before'
+    },
+    enabled: true,
+    order: 5
+  },
+  'accounting_ky': {
+    id: 'accounting_ky',
+    name: '세무사 기장료 (KY)',
+    icon: '📊',
+    company: 'KY',
+    category: '03',
+    txType: 'cost',
+    amount: 110000,
+    vatIncluded: true,
+    vendor: '세무사사무소',
+    payment: 'transfer',
+    summary: '세무사 기장료 (공급가 100,000 + 부가세 10,000)',
+    schedule: {
+      type: 'monthly_last',
+      holidayRule: 'before'
+    },
+    enabled: true,
+    order: 6
+  }
+};
+
+let templates = {};
+
+window.goBack = () => { location.href = 'main.html'; };
+
+function showToast(msg, type){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type || '');
+  setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+function escapeHtml(s){
+  if(s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function jsAttr(v){
+  return JSON.stringify(v == null ? '' : v).replace(/"/g,'&quot;');
+}
+
+function fmt(n){ return (n || 0).toLocaleString('ko-KR'); }
+
+// ============ 날짜 헬퍼 ============
+function isHoliday(date){
+  // 토요일(6) 또는 일요일(0)
+  const d = new Date(date);
+  const dow = d.getDay();
+  return dow === 0 || dow === 6;
+  // TODO: 공휴일 처리 (필요시 KO 공휴일 데이터 추가)
+}
+
+function adjustForHoliday(year, month, day, rule){
+  // year, month, day → 휴일 조정된 날짜
+  let d = new Date(year, month - 1, day);
+  while(isHoliday(d)){
+    if(rule === 'before') d.setDate(d.getDate() - 1);
+    else if(rule === 'after') d.setDate(d.getDate() + 1);
+    else break;
+  }
+  return d;
+}
+
+function getLastDayOfMonth(year, month){
+  return new Date(year, month, 0).getDate();
+}
+
+function calcExecuteDate(template, year, month){
+  const sch = template.schedule || {};
+  if(sch.type === 'monthly_day'){
+    const day = Math.min(sch.day || 1, getLastDayOfMonth(year, month));
+    const adjusted = adjustForHoliday(year, month, day, sch.holidayRule || 'after');
+    return adjusted;
+  } else if(sch.type === 'monthly_last'){
+    const lastDay = getLastDayOfMonth(year, month);
+    const adjusted = adjustForHoliday(year, month, lastDay, sch.holidayRule || 'before');
+    return adjusted;
+  }
+  return new Date(year, month - 1, 1);
+}
+
+function formatDate(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// ============ 템플릿 로드 ============
+async function loadTemplates(){
+  try{
+    const snap = await get(ref(db, 'tax_helper/templates'));
+    if(snap.exists()){
+      templates = snap.val();
+    } else {
+      // 처음 로드: 기본 템플릿 저장
+      templates = JSON.parse(JSON.stringify(DEFAULT_TEMPLATES));
+      await set(ref(db, 'tax_helper/templates'), templates);
+    }
+    renderList();
+  }catch(e){
+    console.error('템플릿 로드 실패:', e);
+    showToast('템플릿 로드 실패: ' + e.message, 'error');
+  }
+}
+
+function renderList(){
+  const list = document.getElementById('templateList');
+  const items = Object.values(templates).sort((a, b) => (a.order || 99) - (b.order || 99));
+  if(items.length === 0){
+    list.innerHTML = '<div style="padding:30px;text-align:center;color:#6b7280;">템플릿이 없습니다</div>';
+    return;
+  }
+
+  list.innerHTML = items.map(t => {
+    const isCost = (t.category === '03' || t.category === '04');
+    const schText = t.schedule.type === 'monthly_last' 
+      ? `매달 말일 (${t.schedule.holidayRule === 'before' ? '주말이면 전 영업일' : '주말이면 다음 영업일'})`
+      : `매달 ${t.schedule.day}일 (${t.schedule.holidayRule === 'before' ? '주말이면 전날' : '주말이면 다음날'})`;
+    return `
+      <div class="template-item ${t.enabled ? '' : 'disabled'}">
+        <div class="template-item-head">
+          <div>
+            <div class="template-name">${escapeHtml(t.icon || '📌')} ${escapeHtml(t.name)}</div>
+            <div class="template-detail">${escapeHtml(schText)}</div>
+          </div>
+          <div class="template-amount ${isCost ? 'cost' : 'salary'}">${fmt(t.amount)}원</div>
+        </div>
+        <div class="template-actions">
+          <span class="template-meta company">${escapeHtml(t.company)}</span>
+          <span class="template-meta">${escapeHtml(t.summary)}</span>
+          ${t.vatIncluded ? '<span class="template-meta">부가세 포함</span>' : ''}
+          <button class="btn-toggle ${t.enabled ? 'on' : 'off'}" onclick="toggleEnabled(${jsAttr(t.id)})">${t.enabled ? '활성' : '비활성'}</button>
+          <button class="btn btn-secondary" onclick="editTemplate(${jsAttr(t.id)})">✏️ 편집</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+window.toggleEnabled = async (id) => {
+  const t = templates[id];
+  if(!t) return;
+  try{
+    await update(ref(db, 'tax_helper/templates/' + id), { enabled: !t.enabled });
+    t.enabled = !t.enabled;
+    renderList();
+    showToast(`${t.enabled ? '✅ 활성화' : '🔕 비활성화'}`, 'success');
+  }catch(e){
+    showToast('변경 실패: ' + e.message, 'error');
+  }
+};
+
+window.editTemplate = (id) => {
+  const t = templates[id];
+  if(!t) return;
+  document.getElementById('modalTitle').textContent = t.icon + ' ' + t.name + ' 편집';
+
+  const isInsurance = t.breakdown && (t.id === 'insurance_4');
+
+  let extraHtml = '';
+  if(isInsurance){
+    extraHtml = `
+      <div class="field">
+        <label>4대보험 세부 항목 (합계는 자동 계산)</label>
+        <div class="insurance-row">
+          <span>국민연금</span>
+          <input type="text" id="bd_pension" value="${fmt(t.breakdown.pension || 0)}" oninput="onInsuranceInput(this)">
+        </div>
+        <div class="insurance-row">
+          <span>국민건강보험</span>
+          <input type="text" id="bd_health" value="${fmt(t.breakdown.health || 0)}" oninput="onInsuranceInput(this)">
+        </div>
+        <div class="insurance-row">
+          <span>고용보험</span>
+          <input type="text" id="bd_employment" value="${fmt(t.breakdown.employment || 0)}" oninput="onInsuranceInput(this)">
+        </div>
+        <div class="insurance-row">
+          <span>산재보험</span>
+          <input type="text" id="bd_industrial" value="${fmt(t.breakdown.industrial || 0)}" oninput="onInsuranceInput(this)">
+        </div>
+        <div class="insurance-total">합계: <span id="bd_total">${fmt(t.amount)}</span>원</div>
+      </div>`;
+  }
+
+  document.getElementById('modalContent').innerHTML = `
+    <div class="row2">
+      <div class="field">
+        <label>이름</label>
+        <input type="text" id="editName" value="${escapeHtml(t.name)}">
+      </div>
+      <div class="field">
+        <label>법인</label>
+        <select id="editCompany">
+          <option value="AMT" ${t.company==='AMT'?'selected':''}>AMT</option>
+          <option value="KY" ${t.company==='KY'?'selected':''}>KY</option>
+          <option value="BEST" ${t.company==='BEST'?'selected':''}>BEST</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>분류</label>
+        <select id="editCategory">
+          <option value="03" ${t.category==='03'?'selected':''}>03_경비</option>
+          <option value="04" ${t.category==='04'?'selected':''}>04_급여</option>
+          <option value="07" ${t.category==='07'?'selected':''}>07_세금</option>
+          <option value="08" ${t.category==='08'?'selected':''}>08_기타</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>금액 (원)</label>
+        <input type="text" id="editAmount" value="${fmt(t.amount)}" ${isInsurance?'readonly style="background:#f9fafb;"':''} oninput="this.value=Number(this.value.replace(/[^0-9]/g,'')||0).toLocaleString('ko-KR');">
+      </div>
+    </div>
+
+    ${extraHtml}
+
+    <div class="field">
+      <label>거래처</label>
+      <input type="text" id="editVendor" value="${escapeHtml(t.vendor || '')}">
+    </div>
+
+    <div class="field">
+      <label>적요</label>
+      <input type="text" id="editSummary" value="${escapeHtml(t.summary || '')}">
+    </div>
+
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:6px;">
+        <input type="checkbox" id="editVatIncluded" ${t.vatIncluded?'checked':''}>
+        부가세 포함
+      </label>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>실행 시점</label>
+        <select id="editScheduleType">
+          <option value="monthly_day" ${t.schedule.type==='monthly_day'?'selected':''}>매달 특정 일</option>
+          <option value="monthly_last" ${t.schedule.type==='monthly_last'?'selected':''}>매달 말일</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>날짜 (말일이면 무시)</label>
+        <input type="number" id="editScheduleDay" min="1" max="31" value="${t.schedule.day || 1}">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>휴일/주말 처리</label>
+      <select id="editHolidayRule">
+        <option value="before" ${t.schedule.holidayRule==='before'?'selected':''}>전 영업일로 이동</option>
+        <option value="after" ${t.schedule.holidayRule==='after'?'selected':''}>다음 영업일로 이동</option>
+      </select>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">취소</button>
+      <button class="btn btn-primary" onclick="saveEdit(${jsAttr(t.id)})">💾 저장</button>
+    </div>
+  `;
+  document.getElementById('editModal').classList.add('show');
+};
+
+window.onInsuranceInput = (input) => {
+  let v = parseInt(input.value.replace(/[^0-9]/g, ''), 10) || 0;
+  input.value = fmt(v);
+  // 합계 자동 계산
+  const ids = ['bd_pension','bd_health','bd_employment','bd_industrial'];
+  let total = 0;
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if(el) total += parseInt(el.value.replace(/[^0-9]/g, ''), 10) || 0;
+  });
+  const totalEl = document.getElementById('bd_total');
+  const amtEl = document.getElementById('editAmount');
+  if(totalEl) totalEl.textContent = fmt(total);
+  if(amtEl) amtEl.value = fmt(total);
+};
+
+window.closeModal = () => {
+  document.getElementById('editModal').classList.remove('show');
+};
+
+document.getElementById('editModal').addEventListener('click', e => {
+  if(e.target.id === 'editModal') closeModal();
+});
+
+window.saveEdit = async (id) => {
+  const t = templates[id];
+  if(!t) return;
+
+  const name = document.getElementById('editName').value.trim();
+  const company = document.getElementById('editCompany').value;
+  const category = document.getElementById('editCategory').value;
+  const amount = parseInt(document.getElementById('editAmount').value.replace(/[^0-9]/g, ''), 10) || 0;
+  const vendor = document.getElementById('editVendor').value.trim();
+  const summary = document.getElementById('editSummary').value.trim();
+  const vatIncluded = document.getElementById('editVatIncluded').checked;
+  const schedType = document.getElementById('editScheduleType').value;
+  const schedDay = parseInt(document.getElementById('editScheduleDay').value, 10) || 1;
+  const holidayRule = document.getElementById('editHolidayRule').value;
+
+  if(!name || !amount){ showToast('이름과 금액은 필수', 'error'); return; }
+
+  const updated = {
+    ...t,
+    name, company, category, amount,
+    vendor: vendor || null,
+    summary: summary || null,
+    vatIncluded,
+    schedule: { type: schedType, day: schedDay, holidayRule }
+  };
+
+  // 4대보험 세부 항목 저장
+  if(id === 'insurance_4'){
+    updated.breakdown = {
+      pension: parseInt((document.getElementById('bd_pension').value||'0').replace(/[^0-9]/g, ''), 10) || 0,
+      health: parseInt((document.getElementById('bd_health').value||'0').replace(/[^0-9]/g, ''), 10) || 0,
+      employment: parseInt((document.getElementById('bd_employment').value||'0').replace(/[^0-9]/g, ''), 10) || 0,
+      industrial: parseInt((document.getElementById('bd_industrial').value||'0').replace(/[^0-9]/g, ''), 10) || 0
+    };
+  }
+
+  try{
+    await set(ref(db, 'tax_helper/templates/' + id), updated);
+    templates[id] = updated;
+    closeModal();
+    renderList();
+    showToast('✅ 저장 완료', 'success');
+  }catch(e){
+    showToast('저장 실패: ' + e.message, 'error');
+  }
+};
+
+// ============ 거래 생성 (자동) ============
+async function loadExistingByTemplate(){
+  const snap = await get(ref(db, 'tax_helper/transactions'));
+  const map = {};
+  if(snap.exists()){
+    const all = snap.val();
+    for(const [id, t] of Object.entries(all)){
+      if(t.sourceSystem === 'template' && t.sourceId){
+        map[t.sourceId] = { id, ...t };
+      }
+    }
+  }
+  return map;
+}
+
+function logProgress(text, type){
+  const log = document.getElementById('progressLog');
+  const div = document.createElement('div');
+  div.className = 'log-item ' + (type || '');
+  div.textContent = text;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+async function executeGenerate(dryRun, targetYear, targetMonth){
+  const log = document.getElementById('progressLog');
+  log.classList.remove('hidden');
+  log.innerHTML = '';
+
+  const useOverride = document.getElementById('overrideDates').checked;
+  const existing = await loadExistingByTemplate();
+  logProgress(`▶ ${targetYear}년 ${targetMonth}월 거래 생성 ${dryRun?'시뮬레이션':'실행'}`, 'info');
+  if(useOverride) logProgress('📌 개별 날짜 지정 모드', 'info');
+  logProgress(`기존 템플릿 거래: ${Object.keys(existing).length}건`, 'info');
+  logProgress('━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+
+  let created = 0, skipped = 0, errors = 0;
+  const items = Object.values(templates).filter(t => t.enabled).sort((a,b)=>(a.order||99)-(b.order||99));
+
+  for(const t of items){
+    try{
+      // 오버라이드 날짜 vs 자동 계산
+      let date;
+      if(useOverride){
+        const ovEl = document.getElementById('ovd_' + t.id);
+        if(ovEl && ovEl.value){
+          date = new Date(ovEl.value);
+          if(isNaN(date.getTime())){
+            date = calcExecuteDate(t, targetYear, targetMonth);
+          }
+        } else {
+          date = calcExecuteDate(t, targetYear, targetMonth);
+        }
+      } else {
+        date = calcExecuteDate(t, targetYear, targetMonth);
+      }
+      const dateStr = formatDate(date);
+      const sourceId = `tpl_${t.id}_${targetYear}_${String(targetMonth).padStart(2,'0')}`;
+
+      if(existing[sourceId]){
+        logProgress(`  ⏭️ 스킵: ${t.name} (이미 생성됨)`, 'info');
+        skipped++;
+        continue;
+      }
+
+      const supplyAmount = t.vatIncluded ? Math.round(t.amount / 1.1) : t.amount;
+      const vatAmount = t.vatIncluded ? (t.amount - supplyAmount) : 0;
+
+      const txData = {
+        sourceSystem: 'template',
+        sourceType: 'recurring',
+        sourceId,
+        templateId: t.id,
+        date: dateStr,
+        month: `${targetYear}_${String(targetMonth).padStart(2,'0')}`,
+        company: t.company,
+        category: t.category,
+        txType: t.txType,
+        amount: t.amount,
+        vatIncluded: t.vatIncluded || false,
+        supplyAmount,
+        vatAmount,
+        vendor: t.vendor || null,
+        summary: t.summary || t.name,
+        payment: t.payment || 'transfer',
+        memo: null,
+        attachments: []
+      };
+      if(t.breakdown){
+        txData.breakdown = t.breakdown;
+      }
+
+      if(!dryRun){
+        const newRef = push(ref(db, 'tax_helper/transactions'));
+        txData.id = newRef.key;
+        txData.createdAt = Date.now();
+        txData.createdBy = 'system_template';
+        txData.createdByName = '반복 거래 자동 생성';
+        await set(newRef, txData);
+      }
+      created++;
+      logProgress(`  ✅ ${dryRun?'생성 예정':'생성됨'}: ${t.name} - ${dateStr} - ${fmt(t.amount)}원`, 'done');
+    }catch(e){
+      console.error(e);
+      errors++;
+      logProgress(`  ❌ 실패: ${t.name} (${e.message})`, 'error');
+    }
+  }
+
+  logProgress('━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+  logProgress(`🎉 완료: 생성 ${created} / 스킵 ${skipped} / 에러 ${errors}`, 'done');
+
+  if(!dryRun && created > 0){
+    try{
+      const auditRef = push(ref(db, 'tax_helper/audit'));
+      await set(auditRef, {
+        action: 'template_generate',
+        user: sess.email,
+        timestamp: Date.now(),
+        details: `${targetYear}-${targetMonth} 반복거래: 생성 ${created}건` + (useOverride ? ' (날짜 개별 지정)' : '')
+      });
+    }catch(e){}
+  }
+
+  showToast(`${dryRun?'시뮬레이션':'생성'} 완료: ${created}건`, 'success');
+}
+
+window.doSimulate = () => {
+  const { year, month } = getTargetYM();
+  executeGenerate(true, year, month);
+};
+
+window.doGenerate = () => {
+  const { year, month } = getTargetYM();
+  if(!confirm(`${year}년 ${month}월 반복 거래를 자동 생성합니다.\n계속할까요?`)) return;
+  executeGenerate(false, year, month);
+};
+
+function initTargetSelectors(){
+  const now = new Date();
+  const curYear = now.getFullYear();
+  const curMonth = now.getMonth() + 1;
+
+  // 년도: 작년 ~ 다음년도
+  const yearSel = document.getElementById('targetYear');
+  yearSel.innerHTML = '';
+  for(let y = curYear - 1; y <= curYear + 1; y++){
+    const opt = document.createElement('option');
+    opt.value = y;
+    opt.textContent = y + '년';
+    if(y === curYear) opt.selected = true;
+    yearSel.appendChild(opt);
+  }
+
+  // 월: 1~12
+  const monthSel = document.getElementById('targetMonth');
+  monthSel.innerHTML = '';
+  for(let m = 1; m <= 12; m++){
+    const opt = document.createElement('option');
+    opt.value = m;
+    opt.textContent = m + '월';
+    if(m === curMonth) opt.selected = true;
+    monthSel.appendChild(opt);
+  }
+
+  yearSel.addEventListener('change', updateDatePreview);
+  monthSel.addEventListener('change', updateDatePreview);
+
+  document.getElementById('overrideDates').addEventListener('change', function(){
+    document.getElementById('overrideArea').style.display = this.checked ? 'block' : 'none';
+    if(this.checked) renderOverrideList();
+  });
+}
+
+function getTargetYM(){
+  const y = parseInt(document.getElementById('targetYear').value, 10);
+  const m = parseInt(document.getElementById('targetMonth').value, 10);
+  return { year: y, month: m };
+}
+
+function updateDatePreview(){
+  if(!templates || Object.keys(templates).length === 0) return;
+  const { year, month } = getTargetYM();
+  const enabled = Object.values(templates).filter(t => t.enabled).sort((a,b)=>(a.order||99)-(b.order||99));
+  const preview = enabled.map(t => {
+    const d = calcExecuteDate(t, year, month);
+    return `<div style="display:flex;justify-content:space-between;padding:2px 0;">
+      <span>${escapeHtml(t.icon||'📌')} ${escapeHtml(t.name)}</span>
+      <span style="font-family:monospace;font-weight:700;">${formatDate(d)}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('datePreview').innerHTML = preview || '활성화된 템플릿이 없습니다';
+  
+  // 오버라이드 영역도 다시 렌더링
+  if(document.getElementById('overrideDates').checked){
+    renderOverrideList();
+  }
+}
+
+function renderOverrideList(){
+  if(!templates || Object.keys(templates).length === 0) return;
+  const { year, month } = getTargetYM();
+  const enabled = Object.values(templates).filter(t => t.enabled).sort((a,b)=>(a.order||99)-(b.order||99));
+  const list = document.getElementById('overrideList');
+  list.innerHTML = enabled.map(t => {
+    const d = calcExecuteDate(t, year, month);
+    const dateStr = formatDateInput(d);
+    return `<div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #e5e7eb;">
+      <span style="font-size:.82rem;">${escapeHtml(t.icon||'📌')} ${escapeHtml(t.name)}</span>
+      <input type="date" id="ovd_${escapeHtml(t.id)}" value="${dateStr}" style="padding:5px 8px;border:1.5px solid #e5e7eb;border-radius:6px;font-size:.82rem;font-family:inherit;">
+    </div>`;
+  }).join('');
+}
+
+function formatDateInput(d){
+  // for <input type="date">
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// 시작
+onAuthStateChanged(auth, async user => {
+  if(!user){
+    alert('세션 만료. 다시 로그인해주세요.');
+    location.replace('index.html');
+    return;
+  }
+  initTargetSelectors();
+  await loadTemplates();
+  updateDatePreview();
+});
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js?v=20260524-v7')
+    .then(reg => console.log('[SW] 등록 완료'))
+    .catch(err => console.log('[SW] 등록 실패:', err));
+}
+</script>
+
+</body>
+</html>

@@ -835,7 +835,7 @@ onAuthStateChanged(auth, async user => {
 
 // Service Worker
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js?v=20260524-v5')
+  navigator.serviceWorker.register('sw.js?v=20260524-v7')
     .then(reg => console.log('[SW] 등록 완료'))
     .catch(err => console.log('[SW] 등록 실패:', err));
 }

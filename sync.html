@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AMT 동기화 - 세무자료 도우미</title>
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#16a34a">
+
+  <style>
+    :root{
+      --green:#16a34a;--green-dark:#15803d;--green-light:#dcfce7;
+      --red:#ef4444;--orange:#f59e0b;--blue:#3b82f6;
+      --gray:#6b7280;--gray-light:#f3f4f6;--border:#e5e7eb;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;background:#f9fafb;min-height:100vh;color:#111;}
+
+    .header{background:#fff;border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10;}
+    .logo-icon{width:36px;height:36px;background:var(--blue);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;}
+    .header-title{font-size:1rem;font-weight:800;}
+    .header-sub{font-size:.7rem;color:var(--gray);}
+    .back-btn{padding:6px 12px;background:var(--gray-light);border:none;border-radius:6px;font-size:.8rem;font-weight:600;cursor:pointer;}
+
+    .container{max-width:900px;margin:0 auto;padding:20px;}
+
+    .card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:16px;}
+    .card-title{font-size:1rem;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+
+    .status-box{padding:14px 16px;border-radius:10px;margin-bottom:14px;display:flex;gap:10px;align-items:flex-start;font-size:.85rem;line-height:1.5;}
+    .status-box.success{background:var(--green-light);border:1px solid #bbf7d0;color:var(--green-dark);}
+    .status-box.info{background:#dbeafe;border:1px solid #bfdbfe;color:#1e40af;}
+    .status-box.warn{background:#fef3c7;border:1px solid #fde68a;color:#92400e;}
+    .status-box.error{background:#fee2e2;border:1px solid #fecaca;color:#991b1b;}
+    .status-box strong{display:block;margin-bottom:4px;font-size:.92rem;}
+
+    .info-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-light);font-size:.85rem;}
+    .info-row:last-child{border-bottom:none;}
+    .info-label{color:var(--gray);}
+    .info-value{font-weight:700;}
+
+    .mode-options{display:grid;gap:10px;}
+    .mode-option{padding:14px 16px;border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;}
+    .mode-option:hover{border-color:var(--blue);}
+    .mode-option.active{background:#eff6ff;border-color:var(--blue);}
+    .mode-option-title{font-weight:700;display:flex;align-items:center;gap:8px;font-size:.95rem;margin-bottom:4px;}
+    .mode-option-desc{font-size:.78rem;color:var(--gray);line-height:1.5;}
+    .mode-option input{margin-right:8px;}
+
+    .btn{padding:11px 20px;border:none;border-radius:10px;font-size:.92rem;font-weight:700;cursor:pointer;transition:opacity .2s;display:inline-flex;align-items:center;gap:6px;}
+    .btn-primary{background:var(--green);color:#fff;}
+    .btn-primary:hover{opacity:.9;}
+    .btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+    .btn-secondary{background:var(--gray-light);color:#374151;}
+    .btn-secondary:hover{background:var(--border);}
+    .btn-warn{background:var(--orange);color:#fff;}
+
+    .action-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
+
+    .progress-log{margin-top:14px;max-height:340px;overflow-y:auto;background:var(--gray-light);border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;line-height:1.7;}
+    .progress-log.hidden{display:none;}
+    .log-item{padding:3px 0;}
+    .log-item.done{color:var(--green-dark);}
+    .log-item.error{color:var(--red);}
+    .log-item.info{color:var(--blue);}
+    .log-item.warn{color:var(--orange);}
+    .log-item.gray{color:var(--gray);}
+
+    .summary-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:14px;}
+    .stat-item{padding:12px;background:var(--gray-light);border-radius:8px;text-align:center;}
+    .stat-num{font-size:1.5rem;font-weight:800;}
+    .stat-num.new{color:var(--green-dark);}
+    .stat-num.upd{color:var(--blue);}
+    .stat-num.del{color:var(--red);}
+    .stat-num.skip{color:var(--gray);}
+    .stat-label{font-size:.7rem;color:var(--gray);text-transform:uppercase;margin-top:3px;}
+
+    .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--blue);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    .small-text{font-size:.72rem;color:var(--gray);margin-top:8px;line-height:1.5;}
+    .hidden{display:none !important;}
+
+    .checkbox-group{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:10px;}
+    .checkbox-item{display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--gray-light);border-radius:6px;font-size:.82rem;cursor:pointer;}
+    .checkbox-item input{margin:0;}
+
+    .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:12px 20px;border-radius:8px;font-size:.88rem;z-index:200;opacity:0;transition:opacity .2s;}
+    .toast.show{opacity:1;}
+    .toast.error{background:var(--red);}
+    .toast.success{background:var(--green);}
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <button class="back-btn" onclick="goBack()">← 메인</button>
+  <div class="logo-icon">🔄</div>
+  <div>
+    <div class="header-title">AMT 자동 동기화</div>
+    <div class="header-sub">기존 AMT 시스템 데이터 자동 가져오기</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- 1. 연결 상태 -->
+  <div class="card">
+    <div class="card-title">📡 AMT Firebase 연결 상태</div>
+    <div id="connectionStatus">
+      <div class="status-box info">
+        <span class="spinner"></span>
+        <div>AMT 시스템 연결 확인 중...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. 동기화 설정 -->
+  <div class="card">
+    <div class="card-title">⚙️ 동기화 모드 설정</div>
+    <div class="mode-options" id="modeOptions">
+      <label class="mode-option" data-mode="auto">
+        <input type="radio" name="syncMode" value="auto">
+        <span class="mode-option-title">⚡ 완전 자동</span>
+        <div class="mode-option-desc">앱 열 때마다 백그라운드에서 자동 동기화. 변경된 거래도 자동 반영.</div>
+      </label>
+      <label class="mode-option" data-mode="notify">
+        <input type="radio" name="syncMode" value="notify">
+        <span class="mode-option-title">🔔 알림 모드</span>
+        <div class="mode-option-desc">새 거래 발견 시 알림만, 확인 후 수동 반영.</div>
+      </label>
+      <label class="mode-option" data-mode="manual">
+        <input type="radio" name="syncMode" value="manual">
+        <span class="mode-option-title">👆 수동만</span>
+        <div class="mode-option-desc">아래 "동기화 시작" 버튼 클릭 시만 동기화.</div>
+      </label>
+    </div>
+    <div class="action-row">
+      <button class="btn btn-primary" onclick="saveMode()">💾 모드 저장</button>
+    </div>
+  </div>
+
+  <!-- 3. 동기화 실행 -->
+  <div class="card">
+    <div class="card-title">🚀 동기화 실행</div>
+
+    <div class="info-row">
+      <span class="info-label">시작 날짜</span>
+      <span class="info-value">2026-01-01부터</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">마지막 동기화</span>
+      <span class="info-value" id="lastSyncedAt">-</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">현재 세무 앱 거래 수</span>
+      <span class="info-value" id="currentCount">-</span>
+    </div>
+
+    <div style="margin-top:14px;">
+      <label style="font-size:.8rem;font-weight:700;color:#374151;display:block;margin-bottom:6px;">동기화 항목:</label>
+      <div class="checkbox-group">
+        <label class="checkbox-item"><input type="checkbox" id="syncOrders" checked> 📦 발주 매출 (대리점)</label>
+        <label class="checkbox-item"><input type="checkbox" id="syncTxLogs" checked> 💰 내부거래 (txLogs)</label>
+        <label class="checkbox-item"><input type="checkbox" id="syncBestReturns" checked> 🔄 반품 (bestReturns)</label>
+        <label class="checkbox-item"><input type="checkbox" id="syncImportCosts" checked> 🚢 수입비용</label>
+      </div>
+    </div>
+
+    <div class="action-row">
+      <button class="btn btn-secondary" onclick="doSimulate()">🔍 시뮬레이션 (저장 안 함)</button>
+      <button class="btn btn-primary" onclick="doSync()">▶ 동기화 시작 (실제 저장)</button>
+      <button class="btn btn-warn hidden" id="btnUndo" onclick="undoLastSync()">↩️ 마지막 동기화 취소</button>
+    </div>
+
+    <div class="small-text">
+      💡 처음 사용 시 <strong>시뮬레이션</strong>으로 먼저 결과를 확인하세요.<br>
+      💡 두 번 이상 클릭해도 중복되지 않습니다 (sourceId로 매칭).
+    </div>
+  </div>
+
+  <!-- 4. 결과 -->
+  <div class="card hidden" id="resultCard">
+    <div class="card-title">📊 동기화 결과</div>
+    <div class="summary-stats" id="resultStats"></div>
+    <div class="progress-log" id="progressLog"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getDatabase, ref, get, set, update, remove, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const FB_TAX_CFG = {
+  apiKey: "AIzaSyD6kmefRjjORwWBIyDl1n105bGG7rJf8iQ",
+  authDomain: "amt-tax.firebaseapp.com",
+  databaseURL: "https://amt-tax-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "amt-tax",
+  storageBucket: "amt-tax.firebasestorage.app",
+  messagingSenderId: "759927124180",
+  appId: "1:759927124180:web:20b471702af9ee32354b41"
+};
+
+const FB_AMT_CFG = {
+  apiKey: "AIzaSyC2jfTHmaguOS9e_ddTvicUZJcvXzQ7EKI",
+  authDomain: "amt-ky.firebaseapp.com",
+  databaseURL: "https://amt-ky-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "amt-ky"
+};
+
+const SESSION_KEY = 'tax_auth_session';
+const START_DATE = '2026-01-01';
+
+const appTax = getApps().find(a => a.name === 'amt-tax-app') || initializeApp(FB_TAX_CFG, 'amt-tax-app');
+const appAmt = getApps().find(a => a.name === 'amt-ky-app') || initializeApp(FB_AMT_CFG, 'amt-ky-app');
+
+const dbTax = getDatabase(appTax);
+const dbAmt = getDatabase(appAmt);
+const authTax = getAuth(appTax);
+const authAmt = getAuth(appAmt);
+
+function getSession(){
+  try{ const r=sessionStorage.getItem(SESSION_KEY); return r?JSON.parse(r):null; }catch(e){ return null; }
+}
+const sess = getSession();
+if(!sess){ location.replace('index.html'); }
+
+let amtAuthOk = false;
+let currentSyncMode = 'manual';
+let lastSyncedIds = [];
+
+window.goBack = () => { location.href = 'main.html'; };
+
+function showToast(msg, type){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type || '');
+  setTimeout(()=>t.classList.remove('show'), 2500);
+}
+
+function escapeHtml(s){
+  if(s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function fmt(n){ return (n || 0).toLocaleString('ko-KR'); }
+
+async function ensureAmtAuth(){
+  // AMT 시스템의 실제 dummy password 패턴: 'amtky2026_' + email + '_x'
+  const email = sess.email;
+  const patterns = [
+    'amtky2026_' + email.toLowerCase().replace(/[^a-z0-9]/g,'_') + '_x',
+    'amtky2025_' + email.toLowerCase().replace(/[^a-z0-9]/g,'_') + '_x'
+  ];
+  for(const p of patterns){
+    try{
+      await signInWithEmailAndPassword(authAmt, email, p);
+      amtAuthOk = true;
+      return true;
+    }catch(e){
+      console.log('AMT 인증 시도 실패:', p.substring(0, 20) + '...', e.code);
+    }
+  }
+  return false;
+}
+
+async function checkAmtConnection(){
+  const statusEl = document.getElementById('connectionStatus');
+  try{
+    if(!amtAuthOk){
+      const ok = await ensureAmtAuth();
+      if(!ok){
+        statusEl.innerHTML = `
+          <div class="status-box error">
+            <span>❌</span>
+            <div><strong>AMT Firebase 인증 실패</strong>
+            ${escapeHtml(sess.email)} 계정으로 AMT 시스템에 접근할 수 없습니다.<br>
+            AMT 시스템에 동일한 이메일로 admin으로 등록되어 있어야 합니다.</div>
+          </div>`;
+        return false;
+      }
+    }
+
+    const snap = await get(ref(dbAmt, 'amt_data/orders'));
+    const orderCount = snap.exists() ? Object.keys(snap.val()).length : 0;
+
+    statusEl.innerHTML = `
+      <div class="status-box success">
+        <span>✅</span>
+        <div><strong>AMT 시스템에 정상 연결됨</strong>
+        프로젝트: amt-ky · ${escapeHtml(sess.email)} · 발주 ${orderCount}건 읽기 가능</div>
+      </div>`;
+    return true;
+  }catch(e){
+    console.error('AMT 연결 실패:', e);
+    statusEl.innerHTML = `
+      <div class="status-box error">
+        <span>❌</span>
+        <div><strong>AMT 시스템 연결 실패</strong>
+        ${escapeHtml(e.message || '알 수 없는 오류')}<br>
+        F12 콘솔에서 상세 오류를 확인하세요.</div>
+      </div>`;
+    return false;
+  }
+}
+
+async function loadSyncMode(){
+  try{
+    const snap = await get(ref(dbTax, 'tax_helper/syncState/mode'));
+    currentSyncMode = snap.exists() ? snap.val() : 'manual';
+  }catch(e){ currentSyncMode = 'manual'; }
+  document.querySelectorAll('input[name="syncMode"]').forEach(r => {
+    r.checked = (r.value === currentSyncMode);
+  });
+  document.querySelectorAll('.mode-option').forEach(opt => {
+    opt.classList.toggle('active', opt.dataset.mode === currentSyncMode);
+  });
+}
+
+window.saveMode = async () => {
+  const selected = document.querySelector('input[name="syncMode"]:checked');
+  if(!selected){ showToast('모드를 선택해주세요', 'error'); return; }
+  const mode = selected.value;
+  try{
+    await set(ref(dbTax, 'tax_helper/syncState/mode'), mode);
+    currentSyncMode = mode;
+    showToast('✅ 모드 저장: ' + mode, 'success');
+  }catch(e){
+    showToast('❌ 저장 실패: ' + e.message, 'error');
+  }
+};
+
+document.querySelectorAll('.mode-option').forEach(opt => {
+  opt.addEventListener('click', () => {
+    const radio = opt.querySelector('input');
+    if(radio){
+      radio.checked = true;
+      document.querySelectorAll('.mode-option').forEach(o => o.classList.toggle('active', o === opt));
+    }
+  });
+});
+
+async function loadStatus(){
+  try{
+    const stSnap = await get(ref(dbTax, 'tax_helper/syncState/lastSyncAt'));
+    if(stSnap.exists()){
+      document.getElementById('lastSyncedAt').textContent = new Date(stSnap.val()).toLocaleString('ko-KR');
+    }
+    const txSnap = await get(ref(dbTax, 'tax_helper/transactions'));
+    const count = txSnap.exists() ? Object.keys(txSnap.val()).length : 0;
+    document.getElementById('currentCount').textContent = count + '건';
+
+    const undoSnap = await get(ref(dbTax, 'tax_helper/syncState/lastBatch'));
+    if(undoSnap.exists() && undoSnap.val().ids && undoSnap.val().ids.length > 0){
+      document.getElementById('btnUndo').classList.remove('hidden');
+      lastSyncedIds = undoSnap.val().ids;
+    }
+  }catch(e){
+    console.warn('상태 로드 실패:', e);
+  }
+}
+
+// ============ 매핑 규칙 ============
+function ymFromDate(date){
+  if(!date) return '';
+  const m = String(date).match(/(\d{4})[-\/](\d{2})/);
+  if(!m) return '';
+  return m[1] + '_' + m[2];
+}
+
+function calcVatBreakdown(amount, vatIncluded){
+  if(!vatIncluded){
+    return { supplyAmount: amount, vatAmount: 0 };
+  }
+  const supply = Math.round(amount / 1.1);
+  return { supplyAmount: supply, vatAmount: amount - supply };
+}
+
+function mapOrder(o){
+  const total = (o.total || 0) + (o.fee || 0);
+  if(total <= 0) return null;
+  const { supplyAmount, vatAmount } = calcVatBreakdown(total, true);
+  return [{
+    sourceSystem: 'amt',
+    sourceType: 'order',
+    sourceId: 'order_' + o.id,
+    date: o.orderDate,
+    month: ymFromDate(o.orderDate),
+    company: 'KY',
+    category: '01',
+    txType: 'sale',
+    amount: total,
+    vatIncluded: true,
+    supplyAmount,
+    vatAmount,
+    vendor: o.dealerName || '대리점',
+    summary: `${o.product || ''} ${o.qty || 0}개 발주출고`,
+    payment: 'transfer',
+    memo: o.memo || null
+  }];
+}
+
+function mapTxLog(t){
+  if(!t.type || t.type.startsWith('adj_')) return null;
+  const amt = t.amount || 0;
+  if(amt <= 0) return null;
+
+  const base = {
+    sourceSystem: 'amt',
+    sourceType: 'txLog',
+    sourceId: 'txlog_' + t.id,
+    date: t.date,
+    month: ymFromDate(t.date),
+    amount: amt,
+    payment: 'transfer',
+    memo: null
+  };
+
+  const { supplyAmount, vatAmount } = calcVatBreakdown(amt, true);
+  const supplyOnly = { supplyAmount: amt, vatAmount: 0 };
+
+  switch(t.type){
+    case 'AMT_to_KY':
+    case 'ky_supply_AMT_KY':
+      return [
+        { ...base, company: 'AMT', category: '01', txType: 'sale',
+          vatIncluded: true, supplyAmount, vatAmount,
+          vendor: '㈜케이와이메디칼', summary: 'AMT→KY 내부거래' + (t.memo ? ' / ' + t.memo : '') },
+        { ...base, sourceId: 'txlog_' + t.id + '_pair', company: 'KY', category: '02', txType: 'purchase',
+          vatIncluded: true, supplyAmount, vatAmount,
+          vendor: '㈜에이엠티코리아', summary: 'AMT←KY 내부거래' + (t.memo ? ' / ' + t.memo : '') }
+      ];
+    case 'AMT_to_BEST':
+      return [
+        { ...base, company: 'AMT', category: '01', txType: 'sale',
+          vatIncluded: true, supplyAmount, vatAmount,
+          vendor: 'BEST', summary: 'AMT→BEST 물품공급' + (t.memo ? ' / ' + t.memo : '') },
+        { ...base, sourceId: 'txlog_' + t.id + '_pair', company: 'BEST', category: '02', txType: 'purchase',
+          vatIncluded: true, supplyAmount, vatAmount,
+          vendor: '㈜에이엠티코리아', summary: 'AMT→BEST 물품수령' + (t.memo ? ' / ' + t.memo : '') }
+      ];
+    case 'KY_to_AMT':
+      return [
+        { ...base, company: 'KY', category: '05', txType: 'expense',
+          vatIncluded: false, ...supplyOnly,
+          vendor: '㈜에이엠티코리아', summary: 'KY→AMT 대금지급/선수금' + (t.memo ? ' / ' + t.memo : '') },
+        { ...base, sourceId: 'txlog_' + t.id + '_pair', company: 'AMT', category: '05', txType: 'income',
+          vatIncluded: false, ...supplyOnly,
+          vendor: '㈜케이와이메디칼', summary: 'KY←AMT 대금수령' + (t.memo ? ' / ' + t.memo : '') }
+      ];
+    case 'AMT_pay_KY':
+      return [
+        { ...base, company: 'AMT', category: '05', txType: 'expense',
+          vatIncluded: false, ...supplyOnly,
+          vendor: '㈜케이와이메디칼', summary: 'AMT→KY 대금지급/선수금' + (t.memo ? ' / ' + t.memo : '') },
+        { ...base, sourceId: 'txlog_' + t.id + '_pair', company: 'KY', category: '05', txType: 'income',
+          vatIncluded: false, ...supplyOnly,
+          vendor: '㈜에이엠티코리아', summary: 'AMT←KY 대금수령' + (t.memo ? ' / ' + t.memo : '') }
+      ];
+    case 'BEST_to_AMT':
+      return [
+        { ...base, company: 'BEST', category: '05', txType: 'expense',
+          vatIncluded: false, ...supplyOnly,
+          vendor: '㈜에이엠티코리아', summary: 'BEST→AMT 대금지급' + (t.memo ? ' / ' + t.memo : '') },
+        { ...base, sourceId: 'txlog_' + t.id + '_pair', company: 'AMT', category: '05', txType: 'income',
+          vatIncluded: false, ...supplyOnly,
+          vendor: 'BEST', summary: 'BEST←AMT 대금수령' + (t.memo ? ' / ' + t.memo : '') }
+      ];
+    case 'KY_to_BEST':
+      return [
+        { ...base, company: 'KY', category: '05', txType: 'expense',
+          vatIncluded: false, ...supplyOnly,
+          vendor: 'BEST', summary: 'KY→BEST 대금지급' + (t.memo ? ' / ' + t.memo : '') },
+        { ...base, sourceId: 'txlog_' + t.id + '_pair', company: 'BEST', category: '05', txType: 'income',
+          vatIncluded: false, ...supplyOnly,
+          vendor: '㈜케이와이메디칼', summary: 'KY←BEST 대금수령' + (t.memo ? ' / ' + t.memo : '') }
+      ];
+    case 'BEST_to_KY':
+      return [
+        { ...base, company: 'BEST', category: '05', txType: 'expense',
+          vatIncluded: false, ...supplyOnly,
+          vendor: '㈜케이와이메디칼', summary: 'BEST→KY 대금지급' + (t.memo ? ' / ' + t.memo : '') },
+        { ...base, sourceId: 'txlog_' + t.id + '_pair', company: 'KY', category: '05', txType: 'income',
+          vatIncluded: false, ...supplyOnly,
+          vendor: 'BEST', summary: 'KY←BEST 대금수령' + (t.memo ? ' / ' + t.memo : '') }
+      ];
+    case 'AMT_loan_KY':
+    case 'KY_loan_AMT':
+    case 'AMT_loan_BEST':
+    case 'KY_loan_BEST':
+    case 'best_return_AMT':
+    case 'best_return_KY':
+      return null;
+    default:
+      console.warn('알 수 없는 txLog type:', t.type);
+      return null;
+  }
+}
+
+function mapBestReturn(b){
+  const amt = b.total || 0;
+  if(amt <= 0) return null;
+  const { supplyAmount, vatAmount } = calcVatBreakdown(amt, true);
+
+  const base = {
+    sourceSystem: 'amt',
+    sourceType: 'bestReturn',
+    sourceId: 'best_' + b.id,
+    date: b.date,
+    month: ymFromDate(b.date),
+    payment: 'transfer',
+    vatIncluded: true,
+    memo: b.memo || null
+  };
+
+  switch(b.fromType){
+    case 'KY_to_AMT':
+      return [
+        { ...base, company: 'KY', category: '01', txType: 'sale',
+          amount: -amt, supplyAmount: -supplyAmount, vatAmount: -vatAmount,
+          vendor: '㈜에이엠티코리아', summary: `${b.product||''} ${b.qty||0}개 반품 (KY→AMT)` },
+        { ...base, sourceId: 'best_' + b.id + '_pair', company: 'AMT', category: '02', txType: 'purchase',
+          amount: -amt, supplyAmount: -supplyAmount, vatAmount: -vatAmount,
+          vendor: '㈜케이와이메디칼', summary: `${b.product||''} ${b.qty||0}개 반품 (KY→AMT)` }
+      ];
+    case 'AMT_to_BEST':
+      return [
+        { ...base, company: 'AMT', category: '02', txType: 'purchase',
+          amount: -amt, supplyAmount: -supplyAmount, vatAmount: -vatAmount,
+          vendor: 'BEST', summary: `${b.product||''} ${b.qty||0}개 반품 (AMT→BEST)` },
+        { ...base, sourceId: 'best_' + b.id + '_pair', company: 'BEST', category: '01', txType: 'sale',
+          amount: amt, supplyAmount, vatAmount,
+          vendor: '㈜에이엠티코리아', summary: `${b.product||''} ${b.qty||0}개 반품 (AMT→BEST)` }
+      ];
+    case 'KY_to_BEST':
+      return [
+        { ...base, company: 'KY', category: '02', txType: 'purchase',
+          amount: -amt, supplyAmount: -supplyAmount, vatAmount: -vatAmount,
+          vendor: 'BEST', summary: `${b.product||''} ${b.qty||0}개 반품 (KY→BEST)` },
+        { ...base, sourceId: 'best_' + b.id + '_pair', company: 'BEST', category: '01', txType: 'sale',
+          amount: amt, supplyAmount, vatAmount,
+          vendor: '㈜케이와이메디칼', summary: `${b.product||''} ${b.qty||0}개 반품 (KY→BEST)` }
+      ];
+    default:
+      return null;
+  }
+}
+
+function mapImportCost(id, ic){
+  const amt = ic.total || ((ic.tariff||0) + (ic.shipping||0) + (ic.etc||0));
+  if(amt <= 0) return null;
+  return [{
+    sourceSystem: 'amt',
+    sourceType: 'importCost',
+    sourceId: 'import_' + id,
+    date: ic.date,
+    month: ymFromDate(ic.date),
+    company: 'AMT',
+    category: '02',
+    txType: 'purchase',
+    amount: amt,
+    vatIncluded: false,
+    supplyAmount: amt,
+    vatAmount: 0,
+    vendor: '수입통관',
+    summary: `${ic.product || '제품'} 수입비용 (관세${fmt(ic.tariff||0)}/배송${fmt(ic.shipping||0)}/기타${fmt(ic.etc||0)})`,
+    payment: 'transfer',
+    memo: ic.memo || null
+  }];
+}
+
+// ============ 동기화 실행 ============
+function logProgress(text, type){
+  const log = document.getElementById('progressLog');
+  const div = document.createElement('div');
+  div.className = 'log-item ' + (type || '');
+  div.textContent = text;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+async function fetchAmtData(){
+  const result = {};
+  if(document.getElementById('syncOrders').checked){
+    logProgress('📦 AMT 발주 데이터 읽는 중...', 'info');
+    const snap = await get(ref(dbAmt, 'amt_data/orders'));
+    result.orders = snap.exists() ? Object.values(snap.val()) : [];
+    logProgress(`  → ${result.orders.length}건`, 'gray');
+  }
+  if(document.getElementById('syncTxLogs').checked){
+    logProgress('💰 AMT 내부거래 읽는 중...', 'info');
+    const snap = await get(ref(dbAmt, 'amt_data/txLogs'));
+    result.txLogs = snap.exists() ? Object.values(snap.val()) : [];
+    logProgress(`  → ${result.txLogs.length}건`, 'gray');
+  }
+  if(document.getElementById('syncBestReturns').checked){
+    logProgress('🔄 AMT 반품 읽는 중...', 'info');
+    const snap = await get(ref(dbAmt, 'amt_data/bestReturns'));
+    result.bestReturns = snap.exists() ? Object.values(snap.val()) : [];
+    logProgress(`  → ${result.bestReturns.length}건`, 'gray');
+  }
+  if(document.getElementById('syncImportCosts').checked){
+    logProgress('🚢 AMT 수입비용 읽는 중...', 'info');
+    const snap = await get(ref(dbAmt, 'import_costs'));
+    result.importCosts = snap.exists() ? snap.val() : {};
+    logProgress(`  → ${Object.keys(result.importCosts).length}건`, 'gray');
+  }
+  return result;
+}
+
+function dateInRange(date){
+  if(!date) return false;
+  return String(date) >= START_DATE;
+}
+
+function buildTargets(amtData){
+  const targets = [];
+  if(amtData.orders){
+    for(const o of amtData.orders){
+      if(!dateInRange(o.orderDate)) continue;
+      const m = mapOrder(o);
+      if(m) targets.push(...m);
+    }
+  }
+  if(amtData.txLogs){
+    for(const t of amtData.txLogs){
+      if(!dateInRange(t.date)) continue;
+      const m = mapTxLog(t);
+      if(m) targets.push(...m);
+    }
+  }
+  if(amtData.bestReturns){
+    for(const b of amtData.bestReturns){
+      if(!dateInRange(b.date)) continue;
+      const m = mapBestReturn(b);
+      if(m) targets.push(...m);
+    }
+  }
+  if(amtData.importCosts){
+    for(const [id, ic] of Object.entries(amtData.importCosts)){
+      if(!dateInRange(ic.date)) continue;
+      const m = mapImportCost(id, ic);
+      if(m) targets.push(...m);
+    }
+  }
+  return targets;
+}
+
+async function loadExisting(){
+  const snap = await get(ref(dbTax, 'tax_helper/transactions'));
+  const map = {};
+  if(snap.exists()){
+    const all = snap.val();
+    for(const [id, t] of Object.entries(all)){
+      if(t.sourceSystem === 'amt' && t.sourceId){
+        map[t.sourceId] = { id, ...t };
+      }
+    }
+  }
+  return map;
+}
+
+async function loadSyncDeleted(){
+  const snap = await get(ref(dbTax, 'tax_helper/syncDeleted'));
+  return snap.exists() ? snap.val() : {};
+}
+
+async function executeSync(dryRun){
+  const resultCard = document.getElementById('resultCard');
+  const log = document.getElementById('progressLog');
+  resultCard.classList.remove('hidden');
+  log.innerHTML = '';
+
+  const stats = { new: 0, updated: 0, skipped: 0, errors: 0 };
+  const newIds = [];
+
+  try{
+    if(!amtAuthOk){
+      logProgress('🔐 AMT 시스템 인증 중...', 'info');
+      const ok = await ensureAmtAuth();
+      if(!ok) throw new Error('AMT 시스템 인증 실패');
+    }
+
+    logProgress('━━━━━━━━━━━━━━━━━━━━━━━', 'gray');
+    logProgress('▶ Step 1: AMT 데이터 읽기', 'info');
+    const amtData = await fetchAmtData();
+
+    logProgress('━━━━━━━━━━━━━━━━━━━━━━━', 'gray');
+    logProgress('▶ Step 2: 매핑 규칙 적용', 'info');
+    const targets = buildTargets(amtData);
+    logProgress(`  → 총 ${targets.length}건 매핑됨 (${START_DATE}부터)`, 'gray');
+
+    logProgress('━━━━━━━━━━━━━━━━━━━━━━━', 'gray');
+    logProgress('▶ Step 3: 중복 확인', 'info');
+    const existing = await loadExisting();
+    const syncDeleted = await loadSyncDeleted();
+    logProgress(`  → 기존 동기화 거래: ${Object.keys(existing).length}건`, 'gray');
+    logProgress(`  → 삭제 표시: ${Object.keys(syncDeleted).length}건`, 'gray');
+
+    logProgress('━━━━━━━━━━━━━━━━━━━━━━━', 'gray');
+    logProgress(dryRun ? '▶ Step 4: 시뮬레이션 (저장 안 함)' : '▶ Step 4: 실제 저장', 'info');
+
+    for(const tgt of targets){
+      try{
+        if(syncDeleted[tgt.sourceId]){
+          stats.skipped++;
+          continue;
+        }
+
+        const ex = existing[tgt.sourceId];
+        if(!ex){
+          if(!dryRun){
+            const newRef = push(ref(dbTax, 'tax_helper/transactions'));
+            await set(newRef, {
+              ...tgt,
+              id: newRef.key,
+              syncedAt: Date.now(),
+              syncVersion: 1,
+              createdAt: Date.now(),
+              createdBy: 'system_sync',
+              createdByName: 'AMT 자동 동기화',
+              attachments: []
+            });
+            newIds.push(newRef.key);
+          }
+          stats.new++;
+          if(stats.new <= 10){
+            logProgress(`  + 신규: ${tgt.company}/${tgt.category} ${fmt(tgt.amount)}원 (${tgt.date})`, 'done');
+          } else if(stats.new === 11){
+            logProgress(`  + ... (이하 생략)`, 'gray');
+          }
+        } else {
+          const changed = (ex.amount !== tgt.amount) || (ex.date !== tgt.date) || (ex.vendor !== tgt.vendor);
+          if(changed){
+            if(!dryRun){
+              const history = ex.history || [];
+              history.push({
+                syncedAt: Date.now(),
+                changes: {
+                  amount: { from: ex.amount, to: tgt.amount },
+                  date: { from: ex.date, to: tgt.date },
+                  vendor: { from: ex.vendor, to: tgt.vendor }
+                }
+              });
+              await update(ref(dbTax, 'tax_helper/transactions/' + ex.id), {
+                amount: tgt.amount,
+                supplyAmount: tgt.supplyAmount,
+                vatAmount: tgt.vatAmount,
+                date: tgt.date,
+                month: tgt.month,
+                vendor: tgt.vendor,
+                summary: tgt.summary,
+                syncedAt: Date.now(),
+                syncVersion: (ex.syncVersion || 1) + 1,
+                history
+              });
+            }
+            stats.updated++;
+            if(stats.updated <= 5){
+              logProgress(`  ↻ 변경: ${tgt.company}/${tgt.category} ${fmt(ex.amount)}→${fmt(tgt.amount)}원 (${tgt.date})`, 'warn');
+            }
+          } else {
+            stats.skipped++;
+          }
+        }
+      }catch(e){
+        console.error('항목 처리 실패:', tgt, e);
+        stats.errors++;
+        logProgress(`  ❌ 실패: ${tgt.sourceId} (${e.message})`, 'error');
+      }
+    }
+
+    if(!dryRun){
+      await update(ref(dbTax, 'tax_helper/syncState'), {
+        lastSyncAt: Date.now(),
+        lastSyncBy: sess.email,
+        lastBatch: { ids: newIds, at: Date.now(), count: newIds.length }
+      });
+
+      try{
+        const auditRef = push(ref(dbTax, 'tax_helper/audit'));
+        await set(auditRef, {
+          action: 'amt_sync',
+          user: sess.email,
+          timestamp: Date.now(),
+          details: `신규 ${stats.new} / 변경 ${stats.updated} / 스킵 ${stats.skipped}`
+        });
+      }catch(e){}
+    }
+
+    logProgress('━━━━━━━━━━━━━━━━━━━━━━━', 'gray');
+    logProgress(`🎉 ${dryRun ? '시뮬레이션' : '동기화'} 완료!`, 'done');
+
+    document.getElementById('resultStats').innerHTML = `
+      <div class="stat-item"><div class="stat-num new">${stats.new}</div><div class="stat-label">신규</div></div>
+      <div class="stat-item"><div class="stat-num upd">${stats.updated}</div><div class="stat-label">변경</div></div>
+      <div class="stat-item"><div class="stat-num skip">${stats.skipped}</div><div class="stat-label">스킵</div></div>
+      <div class="stat-item"><div class="stat-num del">${stats.errors}</div><div class="stat-label">에러</div></div>
+    `;
+
+    showToast(dryRun ? '✅ 시뮬레이션 완료' : '✅ 동기화 완료', 'success');
+
+    if(!dryRun){
+      await loadStatus();
+      lastSyncedIds = newIds;
+      if(newIds.length > 0){
+        document.getElementById('btnUndo').classList.remove('hidden');
+      }
+    }
+  }catch(e){
+    console.error('동기화 실패:', e);
+    logProgress(`❌ 동기화 실패: ${e.message}`, 'error');
+    showToast('❌ 동기화 실패: ' + e.message, 'error');
+  }
+}
+
+window.doSimulate = () => executeSync(true);
+window.doSync = () => {
+  if(!confirm('AMT 데이터를 가져와서 세무 앱에 저장합니다.\n계속할까요?')) return;
+  executeSync(false);
+};
+
+window.undoLastSync = async () => {
+  if(!confirm(`마지막 동기화로 추가된 ${lastSyncedIds.length}건의 거래를 모두 삭제합니다.\n진행할까요?`)) return;
+  try{
+    for(const id of lastSyncedIds){
+      await remove(ref(dbTax, 'tax_helper/transactions/' + id));
+    }
+    await set(ref(dbTax, 'tax_helper/syncState/lastBatch'), { ids: [], at: Date.now(), count: 0 });
+    lastSyncedIds = [];
+    document.getElementById('btnUndo').classList.add('hidden');
+    showToast('✅ 마지막 동기화 취소됨', 'success');
+    await loadStatus();
+  }catch(e){
+    showToast('❌ 취소 실패: ' + e.message, 'error');
+  }
+};
+
+onAuthStateChanged(authTax, async user => {
+  if(!user){
+    alert('세션 만료. 다시 로그인해주세요.');
+    location.replace('index.html');
+    return;
+  }
+  await checkAmtConnection();
+  await loadSyncMode();
+  await loadStatus();
+});
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js?v=20260524-v7')
+    .then(reg => console.log('[SW] 등록 완료'))
+    .catch(err => console.log('[SW] 등록 실패:', err));
+}
+</script>
+
+</body>
+</html>

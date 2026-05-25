@@ -1,5 +1,5 @@
 // 세무자료 도우미 Service Worker
-const CACHE = 'tax-v20260524-v5';
+const CACHE = 'tax-v20260524-v7';
 const CORE = [
   './',
   './index.html',
@@ -7,6 +7,9 @@ const CORE = [
   './drive.html',
   './add-transaction.html',
   './transactions.html',
+  './sync.html',
+  './templates.html',
+  './hometax-upload.html',
   './manifest.json'
 ];
 
@@ -30,18 +33,16 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  // Firebase, Google API는 캐시 안 함
   if(url.hostname.includes('firebase') || 
      url.hostname.includes('google') ||
-     url.hostname.includes('gstatic')){
-    return; // 기본 동작 (네트워크)
+     url.hostname.includes('gstatic') ||
+     url.hostname.includes('jsdelivr')){
+    return;
   }
-  // 같은 출처만 캐시 (network-first)
   if(url.origin === location.origin){
     e.respondWith(
       fetch(e.request)
         .then(res => {
-          // 성공 시 캐시 업데이트
           if(res.ok){
             const clone = res.clone();
             caches.open(CACHE).then(c => c.put(e.request, clone));
